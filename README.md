@@ -3,7 +3,7 @@
 1. install java
 2. download dreamvoyage.jar
 3. create config file named settings.properties
-4. run with `java -jar dreamvoyage.jar "c:\my_folder_with_settings"`
+4. run with `java -jar dreamvoyage.jar "c:\my_folder_with_settings\"`
 
 ## Sample settings.properties
 ```
