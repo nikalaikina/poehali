@@ -5,8 +5,8 @@ import java.io.{File, PrintWriter}
 import com.typesafe.config.{Config, ConfigFactory}
 
 object Main extends App {
-  val settingsFileName = "\\settings.properties"
-  val outputFilename = "\\output.txt"
+  val settingsFileName = "settings.properties"
+  val outputFilename = "output.txt"
 
   if (args.isEmpty) {
     Console.err.println("You didn't passed path to settings")
