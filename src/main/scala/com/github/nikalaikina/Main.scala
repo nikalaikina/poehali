@@ -13,7 +13,7 @@ object Main extends App {
     sys.exit(1)
   }
   val configPath = args(0)
-  val config: Config = ConfigFactory.parseFileAnySyntax(new File(configPath + settingsFileName))
+  val config: Config = ConfigFactory.parseFileAnySyntax(new File(configPath + File.separator + settingsFileName))
   val settings = try {
      new Settings(config)
   } catch {
@@ -21,12 +21,12 @@ object Main extends App {
               sys.exit(1)
   }
   println("Parsed settings")
-  val pw = new PrintWriter(new File(configPath + outputFilename))
+  val pw = new PrintWriter(new File(configPath + File.separator + outputFilename))
   try {
     new Logic(settings).writeAnswer(pw)
   } finally {
     pw.flush()
     pw.close()
   }
-  println("Answer is in " + configPath + outputFilename)
+  println("Answer is in " + configPath + File.separator + outputFilename)
 }
