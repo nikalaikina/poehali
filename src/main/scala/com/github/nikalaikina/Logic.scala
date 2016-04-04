@@ -6,6 +6,7 @@ import java.time.temporal.ChronoUnit
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 class Logic(val settings: Settings) {
   val flightsProvider = new FlightsProvider(settings.cities, settings.dateFrom, settings.dateTo)
@@ -13,16 +14,19 @@ class Logic(val settings: Settings) {
   def writeAnswer(writer: PrintWriter) = {
     var queue = mutable.Queue[Route]()
     queue ++= (for (city <- settings.homeCities; day <- getFirstDays) yield new Route(city, day))
+    var routes = new ListBuffer[Route]()
 
     while (queue.nonEmpty) {
       val current = queue.dequeue
       val day = current.days
       if (isFine(current)) {
-        writer.println(current)
+        routes += current
       } else if (day < settings.daysTo && current.cost < settings.cost) {
         processNode(queue, current)
       }
     }
+
+    routes.sortBy(r => r.cost).foreach(r => writer.println(r))
   }
 
   private def isFine(route: Route): Boolean = {
@@ -46,7 +50,7 @@ class Logic(val settings: Settings) {
   }
 
   private def getFlights(route: Route, city: String) = {
-    flightsProvider.getFlights(route.curCity, city, route.date.plusDays(2), route.date.plusDays(settings.daysTo))
+    flightsProvider.getFlights(route.curCity, city, route.curDate.plusDays(2), route.curDate.plusDays(settings.daysTo))
   }
 
   private def getFirstDays: IndexedSeq[LocalDate] = {
