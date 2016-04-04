@@ -1,7 +1,7 @@
 package com.github.nikalaikina
 
 import java.sql.Timestamp
-import java.time.LocalDate
+import java.time.{LocalDateTime, LocalDate}
 import java.time.format.DateTimeFormatter
 
 import org.apache.http.client.methods.HttpGet

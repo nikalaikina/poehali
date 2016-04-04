@@ -1,5 +1,8 @@
 package com.github.nikalaikina
 
+import java.sql.Timestamp
+import java.time.LocalDate
+
 import akka.actor._
 import akka.util.Timeout
 import spray.http.StatusCodes
@@ -12,6 +15,13 @@ import spray.routing._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.jackson.Serialization
+import play.api.libs.json._
+import play.api.libs.json.Json
+import play.api.libs.json.Json._
+import play.api.libs.json.Format
+import play.api.libs.json.JsSuccess
+import play.api.libs.json.Writes
+
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -26,6 +36,9 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
 
   implicit val timeout = Timeout(10 seconds)
   implicit val formats = DefaultFormats
+  implicit val personFormat2 = Json.format[Flight]
+  implicit val personFormat = Json.format[JsonRoute]
+
 
   var quizzes = Vector[Int]()
 
@@ -51,14 +64,14 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
                citiesCount) =>
               val settings = new Settings(homeCities,
                                           cities,
-                                          dateFrom ,
+                                          dateFrom,
                                           dateTo,
                                           daysFrom,
                                           daysTo,
                                           cost,
                                           citiesCount)
-              val ans: List[JsonRoute] = new Logic(settings).answer().map(tr => new JsonRoute(tr.flights))
-              complete(compact(render(Extraction.decompose(ans))))
+              val list: List[JsonRoute] = new Logic(settings).answer().map(tr => new JsonRoute(tr.flights))
+              complete(Json.toJson(list).toString())
           }
         }
       } ~
