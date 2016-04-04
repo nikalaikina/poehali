@@ -23,7 +23,7 @@ object Main extends App {
   println("Parsed settings")
   val pw = new PrintWriter(new File(configPath + File.separator + outputFilename))
   try {
-    new Logic(settings).writeAnswer(pw)
+    new Logic(settings).answer().foreach(r => pw.println(r))
   } finally {
     pw.flush()
     pw.close()

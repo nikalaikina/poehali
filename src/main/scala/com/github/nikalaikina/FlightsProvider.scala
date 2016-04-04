@@ -31,7 +31,7 @@ class FlightsProvider(val cities: List[String], val dateFrom: LocalDate, val dat
 
   private def getFlightsFromServer(from: String, to: String, dateFrom: LocalDate, dateTo: LocalDate) = {
     val urlPattern = s"https://api.skypicker.com/flights?flyFrom=$from&to=$to&dateFrom=${formatter.format(dateFrom)}&dateTo=${formatter.format(dateTo)}&directFlight=1"
-    parseFlights(Http.get(urlPattern))
+    parseFlights(MyHttp.get(urlPattern))
   }
 
   def getFlights(from: String, to: String, dateFrom: LocalDate, dateTo: LocalDate): List[Flight] = {
@@ -46,7 +46,7 @@ class FlightsProvider(val cities: List[String], val dateFrom: LocalDate, val dat
   }
 }
 
-private object Http {
+private object MyHttp {
   def get(url: String,
           connectionTimeout: Int = 10000,
           socketTimeout: Int = 10000): String = {

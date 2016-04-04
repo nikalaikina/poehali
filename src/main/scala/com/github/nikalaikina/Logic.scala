@@ -11,10 +11,10 @@ import scala.collection.mutable.ListBuffer
 class Logic(val settings: Settings) {
   val flightsProvider = new FlightsProvider(settings.cities, settings.dateFrom, settings.dateTo)
 
-  def writeAnswer(writer: PrintWriter) = {
-    var queue = mutable.Queue[Route]()
-    queue ++= (for (city <- settings.homeCities; day <- getFirstDays) yield new Route(city, day))
-    var routes = new ListBuffer[Route]()
+  def answer(): List[TripRoute] = {
+    var queue = mutable.Queue[TripRoute]()
+    queue ++= (for (city <- settings.homeCities; day <- getFirstDays) yield new TripRoute(city, day))
+    var routes = new ListBuffer[TripRoute]()
 
     while (queue.nonEmpty) {
       val current = queue.dequeue
@@ -26,10 +26,10 @@ class Logic(val settings: Settings) {
       }
     }
 
-    routes.sortBy(r => r.cost).foreach(r => writer.println(r))
+    routes.sortBy(r => r.cost).toList
   }
 
-  private def isFine(route: Route): Boolean = {
+  private def isFine(route: TripRoute): Boolean = {
     (route.flights.size > 3
       && settings.homeCities.contains(route.curCity)
       && route.cost < settings.cost
@@ -38,18 +38,18 @@ class Logic(val settings: Settings) {
       && route.days <= settings.daysTo)
   }
 
-  private def processNode(queue: mutable.Queue[Route], current: Route) = {
+  private def processNode(queue: mutable.Queue[TripRoute], current: TripRoute) = {
     for (city <- settings.cities) {
       if (!(current.curCity == city)) {
         val flights = getFlights(current, city)
         if (flights.nonEmpty) {
-          queue += new Route(current, flights.minBy(f => f.price))
+          queue += new TripRoute(current, flights.minBy(f => f.price))
         }
       }
     }
   }
 
-  private def getFlights(route: Route, city: String) = {
+  private def getFlights(route: TripRoute, city: String) = {
     flightsProvider.getFlights(route.curCity, city, route.curDate.plusDays(2), route.curDate.plusDays(settings.daysTo))
   }
 

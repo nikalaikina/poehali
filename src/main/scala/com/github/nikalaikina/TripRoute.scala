@@ -3,10 +3,10 @@ package com.github.nikalaikina
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
-class Route(val firstCity: String, val firstDate: LocalDate) {
+class TripRoute(val firstCity: String, val firstDate: LocalDate) {
   var flights: List[Flight] = List()
 
-  def this(node: Route, flight: Flight) {
+  def this(node: TripRoute, flight: Flight) {
     this(node.firstCity, node.firstDate)
     flights = node.flights :+ flight
   }
