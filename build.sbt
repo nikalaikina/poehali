@@ -16,6 +16,8 @@ libraryDependencies += "org.json4s" % "json4s-native_2.11" % "3.3.0"
 
 libraryDependencies += "com.typesafe" % "config" % "1.3.0"
 
+libraryDependencies += "com.typesafe.play" % "play-json_2.11" % "2.5.1"
+
 libraryDependencies ++= {
   val akkaVersion = "2.3.9"
   val sprayVersion = "1.3.2"
