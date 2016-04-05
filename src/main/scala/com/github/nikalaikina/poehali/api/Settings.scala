@@ -1,14 +1,9 @@
-package com.github.nikalaikina
+package com.github.nikalaikina.poehali.api
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 import com.typesafe.config.Config
-
-object Settings{
-  val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-  def getList(string: String) = string.split(",").toList.map(s => s.trim)
-}
 
 case class Settings(homeCities: List[String],
                     cities: List[String],
@@ -49,5 +44,9 @@ case class Settings(homeCities: List[String],
           cost = config.getInt("cost"),
           citiesCount = config.getInt("citiesCount"))
   }
+}
 
+object Settings{
+  val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+  def getList(string: String) = string.split(",").toList.map(s => s.trim)
 }

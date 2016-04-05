@@ -1,8 +1,10 @@
-package com.github.nikalaikina
+package com.github.nikalaikina.poehali.logic
 
-import java.io.PrintWriter
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+
+import com.github.nikalaikina.poehali.api.Settings
+import com.github.nikalaikina.poehali.sp.FlightsProvider
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
