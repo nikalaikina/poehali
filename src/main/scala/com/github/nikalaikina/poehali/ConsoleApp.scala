@@ -1,10 +1,12 @@
-package com.github.nikalaikina
+package com.github.nikalaikina.poehali
 
 import java.io.{File, PrintWriter}
 
+import com.github.nikalaikina.poehali.api.Settings
+import com.github.nikalaikina.poehali.logic.Logic
 import com.typesafe.config.{Config, ConfigFactory}
 
-object Main extends App {
+object ConsoleApp extends App {
   val settingsFileName = "settings.properties"
   val outputFilename = "output.txt"
 

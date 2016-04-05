@@ -1,20 +1,19 @@
-package com.github.nikalaikina
+package com.github.nikalaikina.poehali
 
 import akka.actor._
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
-import com.typesafe.config.ConfigFactory
+import com.github.nikalaikina.poehali.api.RestInterface
 import spray.can.Http
 
 import scala.concurrent.duration._
 
 object WebAppMain extends App {
-  val config = ConfigFactory.load()
   val host = "localhost"
   val port = 8888
 
-  implicit val system = ActorSystem("quiz-management-service")
+  implicit val system = ActorSystem("routes-service")
 
   val api = system.actorOf(Props(new RestInterface()), "httpInterface")
 
