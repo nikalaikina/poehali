@@ -21,7 +21,7 @@ class FlightsProvider(val cities: List[String], val dateFrom: LocalDate, val dat
   var map: Map[Tuple2[String, String], List[Flight]] = Map()
 
   for (c1 <- cities; c2 <- cities; if !(c1 == c2)) {
-    val flights: List[Flight] = for (f <- getFlightsFromSp(c1, c2, dateFrom, dateTo))
+    val flights = for (f <- getFlightsFromSp(c1, c2, dateFrom, dateTo))
       yield new Flight(f.flyFrom, f.flyTo, f.price, f.date, f.dTimeUTC, f.aTimeUTC)
     map += (Tuple2(c1, c2) -> flights)
   }
@@ -41,7 +41,7 @@ class FlightsProvider(val cities: List[String], val dateFrom: LocalDate, val dat
 
   private def parseFlights(string: String): List[SpFlight] = {
     val elements: JValue = parse(string) \ "data"
-    for (e <- elements.children) yield e.extract[SpFlight]
+    elements.children.map(_.extract[SpFlight])
   }
 }
 
