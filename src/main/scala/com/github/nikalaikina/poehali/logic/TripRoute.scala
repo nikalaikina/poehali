@@ -1,7 +1,7 @@
 package com.github.nikalaikina.poehali.logic
 
 import java.time.LocalDate
-import java.time.temporal.ChronoUnit
+import java.time.temporal.ChronoUnit.DAYS
 
 case class Flight(cityIdFrom: String, cityIdTo: String, price: Float, date: LocalDate, timeFrom: Long, timeTo: Long)
 
@@ -13,13 +13,13 @@ class TripRoute(val firstCity: String, val firstDate: LocalDate) {
     flights = node.flights :+ flight
   }
 
-  def days = if (flights.isEmpty) 0L else ChronoUnit.DAYS.between(firstDate, flights.last.date)
+  def days = if (flights.isEmpty) 0L else DAYS.between(firstDate, flights.last.date)
 
   def cities(except: List[String]) = {
-    flights.map(f => f.cityIdTo).distinct.count(c => !except.contains(c))
+    flights.map(_.cityIdTo).distinct.count(c => !except.contains(c))
   }
 
-  def cost = flights.map(f => f.price).sum
+  def cost = flights.map(_.price).sum
 
   def curCity = if (flights.isEmpty) firstCity else flights.last.cityIdTo
 

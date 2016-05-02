@@ -1,5 +1,7 @@
 package com.github.nikalaikina.poehali.api
 
+import java.time.LocalDate
+
 import akka.actor._
 import akka.util.Timeout
 import com.github.nikalaikina.poehali.logic.{Flight, Logic}
@@ -27,7 +29,7 @@ trait RestApi extends HttpService with ActorLogging { actor: Actor =>
     pathPrefix("flights") {
       pathEnd {
         get {
-          parameters('homeCities, 'cities, 'dateFrom, 'dateTo, 'daysFrom, 'daysTo, 'cost, 'citiesCount)
+          parameters('homeCities, 'cities, 'dateFrom, 'dateTo, 'daysFrom.as[Int], 'daysTo.as[Int], 'cost.as[Int], 'citiesCount.as[Int])
             { (homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount) =>
               val settings = new Settings(homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount)
               val list: List[JsonRoute] = new Logic(settings).answer().map(tr => new JsonRoute(tr.flights))

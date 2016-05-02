@@ -19,19 +19,19 @@ case class Settings(homeCities: List[String],
            _cities: String,
            _dateFrom: String,
            _dateTo: String,
-           _daysFrom: String,
-           _daysTo: String,
-           _cost: String,
-           _citiesCount: String) {
+           _daysFrom: Int,
+           _daysTo: Int,
+           _cost: Int,
+           _citiesCount: Int) {
 
     this (Settings.getList(_homeCities),
-      Settings.getList(_homeCities) ++ Settings.getList(_cities),
+          Settings.getList(_homeCities) ++ Settings.getList(_cities),
           LocalDate.parse(_dateFrom, Settings.formatter),
           LocalDate.parse(_dateTo, Settings.formatter),
-          _daysFrom.toInt,
-          _daysTo.toInt,
-          _cost.toInt,
-          _citiesCount.toInt)
+          _daysFrom,
+          _daysTo,
+          _cost,
+          _citiesCount)
   }
 
   def this(config: Config) {

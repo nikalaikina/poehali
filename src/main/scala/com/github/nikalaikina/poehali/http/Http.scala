@@ -1,7 +1,7 @@
 package com.github.nikalaikina.poehali.http
 
 import org.apache.http.client.methods.HttpGet
-import org.apache.http.impl.client.DefaultHttpClient
+import org.apache.http.impl.client.{HttpClientBuilder, DefaultHttpClient}
 import org.apache.http.params.HttpConnectionParams
 
 object Http {
