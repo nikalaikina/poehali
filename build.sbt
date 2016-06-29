@@ -10,13 +10,13 @@ mainClass in assembly := Some("com.github.nikalaikina.WebAppMain")
 
 libraryDependencies += "org.apache.httpcomponents" % "httpclient" % "4.5"
 
-libraryDependencies += "org.json4s" % "json4s-jackson_2.11" % "3.3.0"
+libraryDependencies += "org.json4s" %% "json4s-jackson" % "3.3.0"
 
-libraryDependencies += "org.json4s" % "json4s-native_2.11" % "3.3.0"
+libraryDependencies += "org.json4s" %% "json4s-native" % "3.3.0"
 
 libraryDependencies += "com.typesafe" % "config" % "1.3.0"
 
-libraryDependencies += "com.typesafe.play" % "play-json_2.11" % "2.5.1"
+libraryDependencies += "com.typesafe.play" %% "play-json" % "2.5.1"
 
 libraryDependencies ++= {
   val akkaVersion = "2.3.9"
@@ -30,6 +30,8 @@ libraryDependencies ++= {
     "ch.qos.logback" % "logback-classic" % "1.1.2",
     "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test",
     "io.spray" %% "spray-testkit" % sprayVersion % "test",
-    "org.specs2" %% "specs2" % "2.3.13" % "test"
+    "org.specs2" %% "specs2" % "2.3.13" % "test",
+    "com.github.cb372" %% "scalacache-core" % "0.9.1",
+    "com.github.cb372" %% "scalacache-guava" % "0.9.1"
   )
 }
