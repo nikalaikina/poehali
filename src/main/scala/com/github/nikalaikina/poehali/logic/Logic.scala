@@ -3,15 +3,18 @@ package com.github.nikalaikina.poehali.logic
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit.DAYS
 
+import akka.actor.{Actor, PoisonPill}
+import akka.actor.Actor.Receive
+import akka.routing.GetRoutees
 import com.github.nikalaikina.poehali.api.Settings
-import com.github.nikalaikina.poehali.sp.FlightsProvider
+import com.github.nikalaikina.poehali.mesagge.Routes
+import com.github.nikalaikina.poehali.sp.{Direction, FlightsProvider}
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-class Logic(val settings: Settings) {
-  val flightsProvider = new FlightsProvider(settings.cities, settings.dateFrom, settings.dateTo)
+class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extends Actor {
 
   def answer(): List[TripRoute] = {
     var queue = mutable.Queue[TripRoute]()
@@ -42,6 +45,7 @@ class Logic(val settings: Settings) {
   private def processNode(queue: mutable.Queue[TripRoute], current: TripRoute) = {
     for (city <- settings.cities; if current.curCity != city) {
       val flights = getFlights(current, city)
+      println("~ got flights")
       if (flights.nonEmpty) {
         queue += new TripRoute(current, flights.minBy(_.price))
       }
@@ -49,7 +53,7 @@ class Logic(val settings: Settings) {
   }
 
   private def getFlights(route: TripRoute, city: String) = {
-    flightsProvider.getFlights(route.curCity, city, route.curDate.plusDays(1), route.curDate.plusDays(settings.daysTo))
+    flightsProvider.getFlights(Direction(route.curCity, city), route.curDate.plusDays(1), route.curDate.plusDays(settings.daysTo))
   }
 
   private def getFirstDays: IndexedSeq[LocalDate] = {
@@ -57,5 +61,12 @@ class Logic(val settings: Settings) {
     val to = settings.dateTo.minusDays(settings.daysFrom)
     val n = DAYS.between(from, to).toInt
     for (i <- 1 to n) yield from.plusDays(i)
+  }
+
+  override def receive: Receive = {
+    case GetRoutees =>
+      println("~ got request")
+      sender() ! Routes(answer())
+      self ! PoisonPill
   }
 }

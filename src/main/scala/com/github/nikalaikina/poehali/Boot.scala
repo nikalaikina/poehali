@@ -5,20 +5,25 @@ import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
 import com.github.nikalaikina.poehali.api.RestInterface
+import com.github.nikalaikina.poehali.sp.FlightsProvider
 import spray.can.Http
 
 import scala.concurrent.duration._
+import scalacache.ScalaCache
+import scalacache.guava.GuavaCache
 
-object WebAppMain extends App {
+object Boot extends App {
   val host = "localhost"
   val port = 8888
 
   implicit val system = ActorSystem("routes-service")
 
-  val api = system.actorOf(Props(new RestInterface()), "httpInterface")
+  implicit val cache = ScalaCache(GuavaCache())
+
+  val api = system.actorOf(Props(new RestInterface(new FlightsProvider())), "httpInterface")
 
   implicit val executionContext = system.dispatcher
-  implicit val timeout = Timeout(10 seconds)
+  implicit val timeout = Timeout(1000 seconds)
 
   IO(Http).ask(Http.Bind(listener = api, interface = host, port = port))
     .mapTo[Http.Event]
