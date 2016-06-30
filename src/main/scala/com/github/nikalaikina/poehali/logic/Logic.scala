@@ -4,8 +4,6 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit.DAYS
 
 import akka.actor.{Actor, PoisonPill}
-import akka.actor.Actor.Receive
-import akka.routing.GetRoutees
 import com.github.nikalaikina.poehali.api.Settings
 import com.github.nikalaikina.poehali.mesagge.Routes
 import com.github.nikalaikina.poehali.sp.{Direction, FlightsProvider}
@@ -15,7 +13,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extends Actor {
-
+  import Logic._
   def answer(): List[TripRoute] = {
     var queue = mutable.Queue[TripRoute]()
     queue ++= (for (city <- settings.homeCities; day <- getFirstDays) yield new TripRoute(city, day))
@@ -67,6 +65,9 @@ class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extend
     case GetRoutees =>
       println("~ got request")
       sender() ! Routes(answer())
-      self ! PoisonPill
+      context.stop(self)
   }
+}
+object Logic {
+  case object GetRoutees
 }

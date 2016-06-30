@@ -20,18 +20,21 @@ libraryDependencies += "com.typesafe.play" %% "play-json" % "2.5.1"
 
 libraryDependencies ++= {
   val akkaVersion = "2.3.9"
-  val sprayVersion = "1.3.2"
+  val sprayVersion = "1.3.1"
   Seq(
-    "com.typesafe.akka" %% "akka-actor" % akkaVersion,
     "io.spray" %% "spray-can" % sprayVersion,
-    "io.spray" % "spray-routing_2.11" % "1.3.3",
-    "io.spray" %% "spray-json" % "1.3.1",
-    "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
-    "ch.qos.logback" % "logback-classic" % "1.1.2",
-    "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test",
+    "io.spray" %% "spray-routing" % sprayVersion,
+    "io.spray" %% "spray-json" % "1.3.2",
     "io.spray" %% "spray-testkit" % sprayVersion % "test",
-    "org.specs2" %% "specs2" % "2.3.13" % "test",
+
+    "com.typesafe.akka" %% "akka-actor" % akkaVersion,
+    "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
+    "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test",
+
     "com.github.cb372" %% "scalacache-core" % "0.9.1",
-    "com.github.cb372" %% "scalacache-guava" % "0.9.1"
+    "com.github.cb372" %% "scalacache-guava" % "0.9.1",
+
+    "ch.qos.logback" % "logback-classic" % "1.1.2",
+    "org.specs2" %% "specs2" % "2.3.13" % "test"
   )
 }
