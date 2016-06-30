@@ -6,7 +6,9 @@ import com.github.nikalaikina.poehali.logic.TripRoute
 package object mesagge {
 
   sealed trait Request
-  class GetRoutes extends Request
+  case object GetRoutees extends Request
+  case class GetPlaces(number: Int) extends Request
+
   sealed trait Response
   case class Routes(routes: List[TripRoute]) extends Response
 

@@ -3,9 +3,9 @@ package com.github.nikalaikina.poehali.logic
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit.DAYS
 
-import akka.actor.{Actor, PoisonPill}
+import akka.actor.Actor
 import com.github.nikalaikina.poehali.api.Settings
-import com.github.nikalaikina.poehali.mesagge.Routes
+import com.github.nikalaikina.poehali.mesagge.{GetRoutees, Routes}
 import com.github.nikalaikina.poehali.sp.{Direction, FlightsProvider}
 
 import scala.collection.immutable.IndexedSeq
@@ -13,7 +13,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extends Actor {
-  import Logic._
+
   def answer(): List[TripRoute] = {
     var queue = mutable.Queue[TripRoute]()
     queue ++= (for (city <- settings.homeCities; day <- getFirstDays) yield new TripRoute(city, day))
@@ -32,7 +32,7 @@ class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extend
   }
 
   private def isFine(route: TripRoute): Boolean = {
-    (route.flights.size > 2
+    (route.flights.size > 1
       && settings.homeCities.contains(route.curCity)
       && route.cost < settings.cost
       && route.cities(settings.homeCities) >= settings.citiesCount
@@ -43,7 +43,6 @@ class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extend
   private def processNode(queue: mutable.Queue[TripRoute], current: TripRoute) = {
     for (city <- settings.cities; if current.curCity != city) {
       val flights = getFlights(current, city)
-      println("~ got flights")
       if (flights.nonEmpty) {
         queue += new TripRoute(current, flights.minBy(_.price))
       }
@@ -63,11 +62,7 @@ class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extend
 
   override def receive: Receive = {
     case GetRoutees =>
-      println("~ got request")
       sender() ! Routes(answer())
       context.stop(self)
   }
-}
-object Logic {
-  case object GetRoutees
 }

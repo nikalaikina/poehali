@@ -5,7 +5,7 @@ import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
 import com.github.nikalaikina.poehali.api.RestInterface
-import com.github.nikalaikina.poehali.sp.FlightsProvider
+import com.github.nikalaikina.poehali.sp.{FlightsProvider, PlacesActor}
 import spray.can.Http
 
 import scala.concurrent.duration._
@@ -20,7 +20,7 @@ object Boot extends App {
 
   implicit val cache = ScalaCache(GuavaCache())
 
-  val api = system.actorOf(Props(new RestInterface(new FlightsProvider())), "httpInterface")
+  val api = system.actorOf(Props(classOf[RestInterface], new FlightsProvider(), system.actorOf(PlacesActor.props())), "httpInterface")
 
   implicit val executionContext = system.dispatcher
   implicit val timeout = Timeout(1000 seconds)
