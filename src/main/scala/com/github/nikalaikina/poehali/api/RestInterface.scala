@@ -6,12 +6,14 @@ import akka.util.Timeout
 import com.github.nikalaikina.poehali.logic.{Flight, Logic}
 import com.github.nikalaikina.poehali.mesagge.{GetPlaces, GetRoutees, Routes}
 import com.github.nikalaikina.poehali.sp._
+import spray.http.HttpHeaders.`Content-Type`
+import spray.http.MediaTypes
 import spray.routing.RejectionHandler.Default
 import spray.routing._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.language.postfixOps
+
 
 class RestInterface(fp: FlightsProvider, cp: ActorRef) extends HttpServiceActor with AskSupport with RestApi {
   implicit val system = context.system
@@ -31,6 +33,7 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
 
   def citiesProvider: ActorRef
 
+  import MediaTypes._
   import com.github.nikalaikina.poehali.util.JsonImplicits._
   import play.api.libs.json._
   implicit val timeout = Timeout(10 seconds)
@@ -61,10 +64,12 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
     pathPrefix("cities") {
       pathEnd {
         get {
-          parameters('number.as[Int]) { (number) => (ctx: RequestContext) =>
-            (citiesProvider ? GetPlaces(number))
-              .mapTo[List[City]]
-              .map { x => ctx.complete(Json.toJson(x).toString) }
+          parameters('number.as[Int]) { (number) =>
+            respondWithHeader(`Content-Type`(`application/json`)) { (ctx: RequestContext) =>
+              (citiesProvider ? GetPlaces(number))
+                .mapTo[List[City]]
+                .map { x => ctx.complete(Json.toJson(x).toString) }
+            }
           }
         }
       }
