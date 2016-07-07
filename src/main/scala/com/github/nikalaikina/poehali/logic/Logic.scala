@@ -3,16 +3,17 @@ package com.github.nikalaikina.poehali.logic
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit.DAYS
 
+import akka.actor.{Props, ActorContext, Actor, PoisonPill}
 import com.github.nikalaikina.poehali.api.Settings
-import com.github.nikalaikina.poehali.sp.FlightsProvider
+import com.github.nikalaikina.poehali.mesagge.{GetRoutes, Routes}
+import com.github.nikalaikina.poehali.sp.{Direction, FlightsProvider}
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-class Logic(val settings: Settings) {
-  val flightsProvider = new FlightsProvider(settings.cities, settings.dateFrom, settings.dateTo)
-
+class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extends Actor {
+  import Logic._
   def answer(): List[TripRoute] = {
     var queue = mutable.Queue[TripRoute]()
     queue ++= (for (city <- settings.homeCities; day <- getFirstDays) yield new TripRoute(city, day))
@@ -31,10 +32,10 @@ class Logic(val settings: Settings) {
   }
 
   private def isFine(route: TripRoute): Boolean = {
-    (route.flights.size > 2
+    (route.flights.size > 1
       && settings.homeCities.contains(route.curCity)
       && route.cost < settings.cost
-      && route.cities(settings.homeCities) >= settings.citiesCount
+      && route.citiesCount(settings.homeCities) >= settings.citiesCount
       && route.days >= settings.daysFrom
       && route.days <= settings.daysTo)
   }
@@ -49,7 +50,7 @@ class Logic(val settings: Settings) {
   }
 
   private def getFlights(route: TripRoute, city: String) = {
-    flightsProvider.getFlights(route.curCity, city, route.curDate.plusDays(1), route.curDate.plusDays(settings.daysTo))
+    flightsProvider.getFlights(Direction(route.curCity, city), route.curDate.plusDays(1), route.curDate.plusDays(settings.daysTo))
   }
 
   private def getFirstDays: IndexedSeq[LocalDate] = {
@@ -58,4 +59,16 @@ class Logic(val settings: Settings) {
     val n = DAYS.between(from, to).toInt
     for (i <- 1 to n) yield from.plusDays(i)
   }
+
+  override def receive: Receive = {
+    case GetRoutees =>
+      println("~ got request")
+      sender() ! Routes(answer())
+      context.stop(self)
+  }
+}
+object Logic {
+  case object GetRoutees
+  def logic(settings: Settings, flightsProvider: FlightsProvider)(implicit context: ActorContext)
+  = context.actorOf(Props(classOf[Logic], settings, flightsProvider))
 }
