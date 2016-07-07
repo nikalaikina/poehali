@@ -4,16 +4,20 @@ import java.time.LocalDate
 
 import akka.actor.{ActorRef, FSM}
 import akka.pattern.AskSupport
+import akka.util.Timeout
 import com.github.nikalaikina.poehali.api.Settings
 import com.github.nikalaikina.poehali.bot.ChatFsm._
 import com.github.nikalaikina.poehali.logic.{Flight, Logic, TripRoute}
 import com.github.nikalaikina.poehali.mesagge.Routes
 import com.github.nikalaikina.poehali.sp.FlightsProvider
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-class ChatFsm(fp: FlightsProvider, botApi: ActorRef) extends FSM[ChatFsm.State, ChatFsm.Data] with AskSupport{
+class ChatFsm(fp: FlightsProvider, botApi: ActorRef) extends FSM[ChatFsm.State, ChatFsm.Data] with AskSupport {
 
   startWith(Idle, Uninitialized)
 
@@ -24,18 +28,21 @@ class ChatFsm(fp: FlightsProvider, botApi: ActorRef) extends FSM[ChatFsm.State, 
     case Event(Calculate, chat: Collecting) =>
       calc(chat).onComplete {
         case Success(list: List[TripRoute]) =>
-          sendResult(chat.id, list)
-          goto(Result) using Result(chat.id, list)
+          val result: ResultRoutes = ResultRoutes(chat.id, chat.homeCities, list)
+          sendResult(chat.id, result)
+          goto(Result) using result
         case Failure(e) => println(s"failed: ${e.getMessage}")
       }
       goto(Idle) using Uninitialized
   }
 
   when(Result) {
-    case Event(GetDetails(k), result: Result) =>
-
+    case Event(GetDetails(k), result: ResultRoutes) =>
+      getDetails(result.chatId, result.best(k))
       stay()
   }
+
+  implicit val timeout = Timeout(10 seconds)
 
   def calc(chat: Collecting): Future[List[TripRoute]] = {
     val settings = Settings(chat.homeCities, chat.cities, LocalDate.now(), LocalDate.now().plusMonths(8), 4, 30, 600, Math.min(2, chat.cities.size - 3))
@@ -44,15 +51,15 @@ class ChatFsm(fp: FlightsProvider, botApi: ActorRef) extends FSM[ChatFsm.State, 
       .map(_.routes)
   }
 
-  def sendDetails(person: Long, route: TripRoute): Unit = {
+  def getDetails(person: Long, route: TripRoute): String = {
     var s = ""
     for (flight <- route.flights) {
       s = s + s"\n${flightFormat(flight)}"
     }
-    botApi ! s
+    s
   }
 
-  def sendResult(person: Long, result: Result): Unit = {
+  def sendResult(person: Long, result: ResultRoutes): Unit = {
     result.best.foreach(route => botApi ! tripFormat(route))
   }
 
@@ -82,7 +89,7 @@ object ChatFsm {
   sealed trait Data
   case object Uninitialized extends Data
   case class Collecting(id: Int, homeCities: List[String], cities: List[String]) extends Data
-  case class Result(chatId: Long, homeCities: List[String], routes: List[TripRoute]) extends Data {
+  case class ResultRoutes(chatId: Long, homeCities: List[String], routes: List[TripRoute]) extends Data {
     val best: List[TripRoute] = {
       val byCitiesCount = routes.groupBy(_.citiesCount(homeCities))
       byCitiesCount.keys.toList.sortBy(-_).take(3).map(n => {
