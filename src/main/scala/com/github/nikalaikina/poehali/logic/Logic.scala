@@ -3,9 +3,10 @@ package com.github.nikalaikina.poehali.logic
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit.DAYS
 
-import akka.actor.Actor
+import akka.actor.{Actor, ActorContext, Props}
+import akka.routing.GetRoutees
 import com.github.nikalaikina.poehali.api.Settings
-import com.github.nikalaikina.poehali.mesagge.{GetRoutees, Routes}
+import com.github.nikalaikina.poehali.mesagge.Routes
 import com.github.nikalaikina.poehali.sp.{Direction, FlightsProvider}
 
 import scala.collection.immutable.IndexedSeq
@@ -35,7 +36,7 @@ class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extend
     (route.flights.size > 1
       && settings.homeCities.contains(route.curCity)
       && route.cost < settings.cost
-      && route.cities(settings.homeCities) >= settings.citiesCount
+      && route.citiesCount(settings.homeCities) >= settings.citiesCount
       && route.days >= settings.daysFrom
       && route.days <= settings.daysTo)
   }
@@ -59,7 +60,6 @@ class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extend
     val n = DAYS.between(from, to).toInt
     for (i <- 1 to n) yield from.plusDays(i)
   }
-}
 
   override def receive: Receive = {
     case GetRoutees =>
