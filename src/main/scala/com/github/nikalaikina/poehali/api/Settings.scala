@@ -5,8 +5,8 @@ import java.time.format.DateTimeFormatter
 
 import com.typesafe.config.Config
 
-case class Settings(homeCities: List[String],
-                    cities: List[String],
+case class Settings(homeCities: Set[String],
+                    cities: Set[String],
                     dateFrom: LocalDate,
                     dateTo: LocalDate,
                     daysFrom: Int,
@@ -24,8 +24,8 @@ case class Settings(homeCities: List[String],
            _cost: Int,
            _citiesCount: Int) {
 
-    this (Settings.getList(_homeCities),
-          Settings.getList(_homeCities) ++ Settings.getList(_cities),
+    this (Settings.getSet(_homeCities),
+          Settings.getSet(_homeCities) ++ Settings.getSet(_cities),
           LocalDate.parse(_dateFrom, Settings.formatter),
           LocalDate.parse(_dateTo, Settings.formatter),
           _daysFrom,
@@ -35,8 +35,8 @@ case class Settings(homeCities: List[String],
   }
 
   def this(config: Config) {
-    this (homeCities = Settings.getList(config.getString ("homeCities")),
-          cities = Settings.getList(config.getString("cities")) ++ Settings.getList(config.getString ("homeCities")),
+    this (homeCities = Settings.getSet(config.getString ("homeCities")),
+          cities = Settings.getSet(config.getString("cities")) ++ Settings.getSet(config.getString ("homeCities")),
           dateFrom = LocalDate.parse(config.getString("dateFrom"), Settings.formatter),
           dateTo = LocalDate.parse(config.getString("dateTo"), Settings.formatter),
           daysFrom = config.getInt("daysFrom"),
@@ -48,5 +48,5 @@ case class Settings(homeCities: List[String],
 
 object Settings{
   val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-  def getList(string: String) = string.split(",").toList.map(s => s.trim)
+  def getSet(string: String) = string.split(",").toList.map(s => s.trim).toSet
 }

@@ -5,7 +5,7 @@ import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
 import com.github.nikalaikina.poehali.api.RestInterface
-import com.github.nikalaikina.poehali.bot.PoehaliBot
+import com.github.nikalaikina.poehali.bot.{Formatter, PoehaliBot}
 import com.github.nikalaikina.poehali.config.UsedCities
 import com.github.nikalaikina.poehali.mesagge.GetPlaces
 import com.github.nikalaikina.poehali.sp.{City, FlightsProvider, PlacesActor}
@@ -46,14 +46,19 @@ object Boot extends App {
 
   def runBot(): Unit = {
     implicit val timeout: Timeout = Timeout(1000 seconds)
-    val map: mutable.Map[String, City] = mutable.Map[String, City]()
+    val shortMap: mutable.Map[String, City] = mutable.Map[String, City]()
+    val fullMap: mutable.Map[String, City] = mutable.Map[String, City]()
     (placesActor ? GetPlaces(10000))
       .mapTo[List[City]]
-      .map(list => list
-                    .filter(c => UsedCities.cities.contains(c.id))
-                    .map(c => map.put(c.id, c)))
+      .map(list => {
+        list.foreach(c => fullMap.put(c.id, c))
+        list
+          .filter(c => UsedCities.cities.contains(c.id))
+          .map(c => shortMap.put(c.id, c))
 
-    system.actorOf(Props(classOf[PoehaliBot], fp, map), "bot")
+      })
+
+    system.actorOf(Props(classOf[PoehaliBot], fp, shortMap, Formatter(fullMap)), "bot")
   }
 
 }
