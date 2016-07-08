@@ -7,9 +7,11 @@ import akka.pattern.AskSupport
 import akka.util.Timeout
 import com.github.nikalaikina.poehali.api.Settings
 import com.github.nikalaikina.poehali.bot.ChatFsm._
+import com.github.nikalaikina.poehali.config.UsedCities
 import com.github.nikalaikina.poehali.logic.{Flight, Logic, TripRoute}
-import com.github.nikalaikina.poehali.mesagge.Routes
-import com.github.nikalaikina.poehali.sp.FlightsProvider
+import com.github.nikalaikina.poehali.mesagge.{GetRoutees, Routes}
+import com.github.nikalaikina.poehali.sp.{City, FlightsProvider}
+import info.mukel.telegrambot4s.models.KeyboardButton
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -17,23 +19,27 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-class ChatFsm(fp: FlightsProvider, botApi: ActorRef) extends FSM[ChatFsm.State, ChatFsm.Data] with AskSupport {
+case class ChatFsm(fp: FlightsProvider, botApi: ActorRef, chatId: Long)
+  extends FSM[ChatFsm.State, ChatFsm.Data] with AskSupport {
 
-  startWith(Idle, Uninitialized)
+  startWith(CollectingCities, Collecting(chatId, "VNO" :: Nil, List()))
+  botApi ! SendCityRequest(chatId, List())
 
   when(CollectingCities) {
     case Event(AddCity(city), chat: Collecting) =>
-      goto(CollectingCities) using Collecting(chat.id, chat.homeCities, city :: chat.cities)
+      botApi ! SendCityRequest(chat.chatId, city ::
+        chat.cities)
+      goto(CollectingCities) using Collecting(chat.chatId, chat.homeCities, city :: chat.cities)
 
     case Event(Calculate, chat: Collecting) =>
       calc(chat).onComplete {
         case Success(list: List[TripRoute]) =>
-          val result: ResultRoutes = ResultRoutes(chat.id, chat.homeCities, list)
-          sendResult(chat.id, result)
+          val result: ResultRoutes = ResultRoutes(chat.chatId, chat.homeCities, list)
+          sendResult(chat.chatId, result)
           goto(Result) using result
         case Failure(e) => println(s"failed: ${e.getMessage}")
       }
-      goto(Idle) using Uninitialized
+      goto(CollectingCities) using Collecting(chatId, "VNO" :: Nil, List())
   }
 
   when(Result) {
@@ -42,11 +48,11 @@ class ChatFsm(fp: FlightsProvider, botApi: ActorRef) extends FSM[ChatFsm.State, 
       stay()
   }
 
-  implicit val timeout = Timeout(10 seconds)
+  implicit val timeout = Timeout(1000 seconds)
 
   def calc(chat: Collecting): Future[List[TripRoute]] = {
-    val settings = Settings(chat.homeCities, chat.cities, LocalDate.now(), LocalDate.now().plusMonths(8), 4, 30, 600, Math.min(2, chat.cities.size - 3))
-    (Logic.logic(settings, fp) ? Logic.GetRoutees)
+    val settings = Settings(chat.homeCities, chat.cities, LocalDate.now(), LocalDate.now().plusMonths(8), 4, 30, 1000, Math.min(2, chat.cities.size - 3))
+    (Logic.logic(settings, fp) ? GetRoutees)
       .mapTo[Routes]
       .map(_.routes)
   }
@@ -60,7 +66,7 @@ class ChatFsm(fp: FlightsProvider, botApi: ActorRef) extends FSM[ChatFsm.State, 
   }
 
   def sendResult(person: Long, result: ResultRoutes): Unit = {
-    result.best.foreach(route => botApi ! tripFormat(route))
+    result.best.foreach(route => botApi ! SendTextAnswer(person, tripFormat(route)))
   }
 
 
@@ -87,8 +93,7 @@ object ChatFsm {
   case object Result extends State
 
   sealed trait Data
-  case object Uninitialized extends Data
-  case class Collecting(id: Int, homeCities: List[String], cities: List[String]) extends Data
+  case class Collecting(chatId: Long, homeCities: List[String], cities: List[String]) extends Data
   case class ResultRoutes(chatId: Long, homeCities: List[String], routes: List[TripRoute]) extends Data {
     val best: List[TripRoute] = {
       val byCitiesCount = routes.groupBy(_.citiesCount(homeCities))

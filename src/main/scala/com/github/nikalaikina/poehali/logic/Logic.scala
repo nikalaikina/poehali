@@ -4,9 +4,8 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit.DAYS
 
 import akka.actor.{Actor, ActorContext, Props}
-import akka.routing.GetRoutees
 import com.github.nikalaikina.poehali.api.Settings
-import com.github.nikalaikina.poehali.mesagge.Routes
+import com.github.nikalaikina.poehali.mesagge.{GetRoutees, Routes}
 import com.github.nikalaikina.poehali.sp.{Direction, FlightsProvider}
 
 import scala.collection.immutable.IndexedSeq
@@ -68,7 +67,6 @@ class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extend
   }
 }
 object Logic {
-  case object GetRoutees
   def logic(settings: Settings, flightsProvider: FlightsProvider)(implicit context: ActorContext)
   = context.actorOf(Props(classOf[Logic], settings, flightsProvider))
 }
