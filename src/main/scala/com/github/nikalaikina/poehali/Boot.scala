@@ -46,19 +46,14 @@ object Boot extends App {
 
   def runBot(): Unit = {
     implicit val timeout: Timeout = Timeout(1000 seconds)
-    val shortMap: mutable.Map[String, City] = mutable.Map[String, City]()
-    val fullMap: mutable.Map[String, City] = mutable.Map[String, City]()
-    (placesActor ? GetPlaces(10000))
+    (placesActor ? GetPlaces())
       .mapTo[List[City]]
       .map(list => {
-        list.foreach(c => fullMap.put(c.id, c))
-        list
-          .filter(c => UsedCities.cities.contains(c.id))
-          .map(c => shortMap.put(c.id, c))
+        val fullMap: Map[String, City] = list.map(c => c.id -> c).toMap
 
+        system.actorOf(Props(classOf[PoehaliBot], fp, fullMap), "bot")
       })
 
-    system.actorOf(Props(classOf[PoehaliBot], fp, shortMap, Formatter(fullMap)), "bot")
   }
 
 }
