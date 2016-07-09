@@ -18,7 +18,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-case class ChatFsm(fp: FlightsProvider, botApi: ActorRef, chatId: Long, formatter: Formatter)
+case class ChatFsm(fp: FlightsProvider, botApi: ActorRef, chatId: Long)
   extends FSM[ChatFsm.State, ChatFsm.Data] with AskSupport {
 
   startWith(CollectingCities, Collecting(Set("VNO"), Set()))
@@ -32,21 +32,24 @@ case class ChatFsm(fp: FlightsProvider, botApi: ActorRef, chatId: Long, formatte
     case Event(Calculate, chat: Collecting) =>
       calc(chat).onComplete {
         case Success(list: List[TripRoute]) =>
-          val result: ResultRoutes = ResultRoutes(chat.homeCities, list)
-          sendResult(chatId, result)
-          botApi ! SendDetailsRequest(chatId, result.best.size)
-          goto(Result) using result
+          val result = ResultRoutes(chat.homeCities, list)
+          self ! Calculated(result)
         case Failure(e) => println(s"failed: ${e.getMessage}")
       }
       botApi ! SendTextAnswer(chatId, "Пришлю ответ как только посчитаю :*")
-      goto(CollectingCities) using Collecting(Set("VNO"), Set())
+      goto(Calculating) using chat
+  }
+
+  when(Calculating) {
+    case Event(Calculated(result), _) =>
+      botApi ! SendBestRoutes(chatId, result.best)
+      goto(Result) using result
   }
 
   when(Result) {
     case Event(GetDetails(k), result: ResultRoutes) =>
-      botApi ! SendTextAnswer(chatId, getDetails(chatId, result.best(k - 1)))
-      botApi ! SendDetailsRequest(chatId, result.best.size)
-      stay()
+      botApi ! SendRouteDetails(chatId, result.best(k - 1))
+      stay() using result
   }
 
   implicit val timeout = Timeout(1000 seconds)
@@ -58,18 +61,6 @@ case class ChatFsm(fp: FlightsProvider, botApi: ActorRef, chatId: Long, formatte
       .map(_.routes)
   }
 
-  def getDetails(person: Long, route: TripRoute): String = {
-    var s = ""
-    for (flight <- route.flights) {
-      s = s + s"\n${formatter.flightFormat(flight)}"
-    }
-    s
-  }
-
-  def sendResult(person: Long, result: ResultRoutes): Unit = {
-    result.best.foreach(route => botApi ! SendTextAnswer(person, formatter.tripFormat(route)))
-  }
-
 }
 
 object ChatFsm {
@@ -77,6 +68,7 @@ object ChatFsm {
   case object Idle extends State
   case object CollectingCities extends State
   case object Result extends State
+  case object Calculating extends State
 
   sealed trait Data
   case class Collecting(homeCities: Set[String], cities: Set[String]) extends Data
@@ -98,22 +90,4 @@ sealed trait ChatMessage
 case class AddCity(cityId: String) extends ChatMessage
 case object Calculate extends ChatMessage
 case class GetDetails(k: Int) extends ChatMessage
-
-
-case class Formatter(cities: mutable.Map[String, City]) {
-
-  def flightFormat(flight: Flight): String = {
-    s"[${flight.direction.from} -> ${flight.direction.to}\t${flight.date}\t${flight.price}]"
-  }
-
-  def tripFormat(route: TripRoute): String = {
-    var citiesString = cities(route.flights.head.direction.from).name
-    for (flight <- route.flights) {
-      citiesString = citiesString + " -> " + cities(flight.direction.to).name
-    }
-
-    val cost = route.flights.map(_.price).sum
-
-    s"[$citiesString]  ($cost$$)  ${route.firstDate} - ${route.curDate}"
-  }
-}
+case class Calculated(resultRoutes: ResultRoutes) extends ChatMessage
