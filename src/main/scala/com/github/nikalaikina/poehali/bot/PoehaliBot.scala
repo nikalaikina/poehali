@@ -26,9 +26,7 @@ class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor w
       if (option.isDefined) {
         option.get ! GetDetails(msg.text.get.toInt)
       }
-    }
-
-    if (!msg.text.get.startsWith("/")) {
+    } else if (!msg.text.get.startsWith("/")) {
       val option: Option[ActorRef] = chats.get(msg.sender)
       if (option.isDefined) {
         val cityId: String = cities.values.find(_.name == msg.text.get).get.id
