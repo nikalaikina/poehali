@@ -6,12 +6,19 @@ import com.github.nikalaikina.poehali.config.UsedCities
 import com.github.nikalaikina.poehali.logic.{Flight, TripRoute}
 import com.github.nikalaikina.poehali.sp.{City, FlightsProvider}
 import info.mukel.telegrambot4s.api.{Commands, Polling, TelegramBot}
-import info.mukel.telegrambot4s.methods.SendMessage
+import info.mukel.telegrambot4s.methods.{ParseMode, SendMessage}
 import info.mukel.telegrambot4s.models._
 
 import scala.collection.mutable
 
+object MessagePatterns {
+  val NumberPattern = "(\\d+)".r
+  val CityPattern = "(^[A-Z][a-z]+)".r
+}
+
 class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor with AbstractBot with AskSupport {
+
+  import MessagePatterns._
 
   val formatter: Formatter = new Formatter(cities)
   val chats: mutable.Map[Long, ActorRef] = mutable.Map[Long, ActorRef]()
@@ -19,29 +26,28 @@ class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor w
   override def preStart(): Unit = run()
 
   override def handleMessage(msg: Message): Unit = {
-    super.handleMessage(msg)
+    implicit val m = msg
 
-    if (msg.text.get.forall(_.isDigit)) {
-      val option: Option[ActorRef] = chats.get(msg.sender)
-      if (option.isDefined) {
-        option.get ! GetDetails(msg.text.get.toInt)
+    msg.text match {
+      case Some(text) => text match {
+        case NumberPattern(n) =>
+          getChat() ! GetDetails(n.toInt)
+        case CityPattern(cityName) =>
+          UsedCities.cities
+            .find(id => cities(id).name == cityName)
+            .foreach(id => getChat() ! AddCity(id))
+        case x => super.handleMessage(msg)
       }
-    } else if (!msg.text.get.startsWith("/")) {
-      val option: Option[ActorRef] = chats.get(msg.sender)
-      if (option.isDefined) {
-        val cityId: String = cities.values.find(_.name == msg.text.get).get.id
-        option.get ! AddCity(cityId)
-      }
+      case None =>
     }
   }
 
   on("/start") { implicit msg => _ =>
-    val chat = system.actorOf(Props(classOf[ChatFsm], fp, self, msg.sender))
-    chats.put(msg.sender, chat)
+    chats.put(msg.sender, newChat())
   }
 
   on("/end") { implicit msg => _ =>
-    chats(msg.sender) ! Calculate
+    getChat() ! Calculate
   }
 
   override def receive: Receive = {
@@ -49,10 +55,11 @@ class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor w
       api.request(SendMessage( Left(id), text))
 
     case SendBestRoutes(id, routes) =>
-      api.request(SendMessage(Left(id), s"${formatter.getResult(id, routes)} \nGet details", replyMarkup = Option(detailsMarkup(routes.size, 5))))
+      api.request(SendMessage(Left(id), s"${formatter.getResult(id, routes)} \n\nGet details:",
+        replyMarkup = Option(detailsMarkup(routes.size, 5)) , parseMode = Some(ParseMode.Markdown)))
 
     case SendRouteDetails(id, route) =>
-      api.request(SendMessage(Left(id), s"Details: \n ${formatter.getDetails(id, route)}"))
+      api.request(SendMessage(Left(id), s"Details: \n${formatter.getDetails(id, route)}", Some(ParseMode.Markdown)))
 
     case SendCityRequest(id, except) =>
       val buttons: Seq[KeyboardButton] = cities.values
@@ -61,7 +68,16 @@ class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor w
         .map(c => KeyboardButton(c.name))
         .toSeq
 
-      api.request(SendMessage(Left(id), "Choose city", replyMarkup = Option(citiesMarkup(buttons, 3))))
+      api.request(SendMessage(Left(id), "Choose city:", replyMarkup = Option(citiesMarkup(buttons, 3))))
+  }
+
+
+  def getChat()(implicit msg: Message): ActorRef = {
+    chats.getOrElseUpdate(msg.sender, newChat())
+  }
+
+  def newChat()(implicit msg: Message): ActorRef = {
+    system.actorOf(Props(classOf[ChatFsm], fp, self, msg.sender))
   }
 
   def citiesMarkup(buttons: Seq[KeyboardButton], n: Int): ReplyKeyboardMarkup = {
@@ -74,12 +90,8 @@ class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor w
   }
 
   def getMarkup(buttons: Seq[KeyboardButton], n: Int): Seq[Seq[KeyboardButton]] = {
-    var seq2 = Seq[Seq[KeyboardButton]]()
-
-    for (i <- 0 to buttons.size / n + 1) {
-      seq2 = seq2 :+ buttons.slice(i * n, i * n + n)
-    }
-    seq2
+    (0 to buttons.size / n + 1)
+      .foldLeft(Seq[Seq[KeyboardButton]]())((seq, i) =>  seq :+ buttons.slice(i * n, i * n + n))
   }
 }
 
@@ -90,22 +102,24 @@ case class Formatter(cities: Map[String, City]) {
   }
 
   def getResult(person: Long, result: List[TripRoute]): String = {
-    result.map(tripFormat).mkString("\n")
+    val list = for ((route, i) <- result.zipWithIndex)
+      yield s"`${i + 1}. `${tripFormat(route)}\n"
+    list.mkString("\n")
   }
 
   def flightFormat(flight: Flight): String = {
-    s"[${flight.direction.from} -> ${flight.direction.to}\t${flight.date}\t${flight.price}]"
+    s"`${flight.direction.from.cityName} -> ${flight.direction.to.cityName}\t${flight.date}\t${flight.price}`"
   }
 
   def tripFormat(route: TripRoute): String = {
-    var citiesString = cities(route.flights.head.direction.from).name
-    for (flight <- route.flights) {
-      citiesString = citiesString + " -> " + cities(flight.direction.to).name
-    }
+    val firstCity: String = route.flights.head.direction.from.cityName
+    val citiesString = (firstCity :: route.flights.map(f => f.direction.to.cityName)).mkString(" -> ")
 
-    val cost = route.flights.map(_.price).sum
+    s"*${route.cost}$$* *|* $citiesString *|* ${route.firstDate} - ${route.curDate}"
+  }
 
-    s"[$citiesString]  ($cost$$)  ${route.firstDate} - ${route.curDate}"
+  implicit class Imp(val s: String) {
+    implicit def cityName: String = cities(s).name
   }
 }
 

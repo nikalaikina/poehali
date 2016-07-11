@@ -50,7 +50,7 @@ class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extend
   }
 
   private def getFlights(route: TripRoute, city: String) = {
-    flightsProvider.getFlights(Direction(route.curCity, city), route.curDate.plusDays(1), route.curDate.plusDays(settings.daysTo))
+    flightsProvider.getFlights(Direction(route.curCity, city), route.curDate.plusDays(2), route.curDate.plusDays(settings.daysTo))
   }
 
   private def getFirstDays: IndexedSeq[LocalDate] = {
@@ -66,6 +66,7 @@ class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extend
       context.stop(self)
   }
 }
+
 object Logic {
   def logic(settings: Settings, flightsProvider: FlightsProvider)(implicit context: ActorContext)
   = context.actorOf(Props(classOf[Logic], settings, flightsProvider))
