@@ -7,11 +7,10 @@ import akka.pattern.AskSupport
 import akka.util.Timeout
 import com.github.nikalaikina.poehali.api.Settings
 import com.github.nikalaikina.poehali.bot.ChatFsm._
-import com.github.nikalaikina.poehali.logic.{Flight, Logic, TripRoute}
+import com.github.nikalaikina.poehali.logic.{Logic, TripRoute}
 import com.github.nikalaikina.poehali.mesagge.{GetRoutees, Routes}
-import com.github.nikalaikina.poehali.sp.{City, FlightsProvider}
+import com.github.nikalaikina.poehali.sp.FlightsProvider
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -30,14 +29,19 @@ case class ChatFsm(fp: FlightsProvider, botApi: ActorRef, chatId: Long)
       goto(CollectingCities) using Collecting(chat.homeCities, chat.cities + city)
 
     case Event(Calculate, chat: Collecting) =>
-      calc(chat).onComplete {
-        case Success(list: List[TripRoute]) =>
-          val result = ResultRoutes(chat.homeCities, list)
-          self ! Calculated(result)
-        case Failure(e) => println(s"failed: ${e.getMessage}")
+      if (chat.cities.isEmpty) {
+        botApi ! SendTextAnswer(chatId, "Add at least one city.")
+        goto(CollectingCities) using chat
+      } else {
+        calc(chat).onComplete {
+          case Success(list: List[TripRoute]) =>
+            val result = ResultRoutes(chat.homeCities, list)
+            self ! Calculated(result)
+          case Failure(e) => println(s"failed: ${e.getMessage}")
+        }
+        botApi ! SendTextAnswer(chatId, "I'll answer you as soon as I have the results.")
+        goto(Calculating) using chat
       }
-      botApi ! SendTextAnswer(chatId, "Пришлю ответ как только посчитаю :*")
-      goto(Calculating) using chat
   }
 
   when(Calculating) {
@@ -84,7 +88,6 @@ object ChatFsm {
     }
   }
 }
-
 
 sealed trait ChatMessage
 case class AddCity(cityId: String) extends ChatMessage
