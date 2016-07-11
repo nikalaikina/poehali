@@ -6,6 +6,7 @@ import java.time.format.DateTimeFormatter
 
 import com.github.nikalaikina.poehali.logic.Flight
 import com.github.nikalaikina.poehali.util.Http
+import info.mukel.telegrambot4s.models.Location
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
@@ -42,10 +43,12 @@ object SpApi {
 
   def places(): List[City] = {
     val urlPattern = s"$url/places"
-    parseCities(Http.get2(urlPattern)).map(c => new City(c.id, c.value, c.sp_score.getOrElse(0))).sortBy(- _.score)
+    parseCities(Http.get2(urlPattern))
+      .filter(c => c.lat.isDefined && c.lng.isDefined)
+      .map(c => new City(c.id, c.value, c.sp_score.getOrElse(0), Location(c.lng.get, c.lat.get))).sortBy(- _.score)
   }
 
-  case class SpCity(id: String, value: String, sp_score: Option[Int])
+  case class SpCity(id: String, value: String, sp_score: Option[Int], lng: Option[Double], lat: Option[Double])
 }
 
-case class City(id: String, name: String, score: Int)
+case class City(id: String, name: String, score: Int, location: Location)
