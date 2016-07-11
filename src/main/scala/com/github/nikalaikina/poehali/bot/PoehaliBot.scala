@@ -1,5 +1,7 @@
 package com.github.nikalaikina.poehali.bot
 
+import java.lang.Math.{acos, cos, sin}
+
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.AskSupport
 import com.github.nikalaikina.poehali.config.UsedCities
@@ -28,6 +30,20 @@ class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor w
   override def handleMessage(msg: Message): Unit = {
     implicit val m = msg
 
+    msg.location match {
+      case Some (location) =>
+        val buttons = cities
+          .values
+          .toList
+          .sortBy (c => DistanceCalculator.distance (location, c.location))
+          .take (5)
+          .map (c => new KeyboardButton (c.name) )
+        api.request (SendMessage (Left (msg.sender), "Choose home city:",
+        replyMarkup = Option(citiesMarkup(buttons, 3))))
+      case None =>
+    }
+
+
     msg.text match {
       case Some(text) => text match {
         case NumberPattern(n) =>
@@ -44,10 +60,12 @@ class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor w
 
   on("/start") { implicit msg => _ =>
     chats.put(msg.sender, newChat())
+    api.request(SendMessage(Left(msg.sender), "Send location:",
+      replyMarkup = Option(ReplyKeyboardMarkup(Seq(Seq(KeyboardButton("/send", requestLocation = Some(true))))))))
   }
 
   on("/end") { implicit msg => _ =>
-    getChat() ! Calculate
+    getChat() ! Next
   }
 
   override def receive: Receive = {
@@ -133,4 +151,18 @@ case class SendRouteDetails(id: Long, route: TripRoute)
 
 trait AbstractBot extends TelegramBot with Polling with Commands {
   def token = Source.fromFile("config/bot.token").getLines().next
+}
+
+object DistanceCalculator
+{
+  def distance(x: Location, y: Location) = {
+    val theta = x.longitude - y.longitude
+    val dist = sin(deg2rad(x.latitude)) * sin(deg2rad(y.latitude)) +
+      cos(deg2rad(x.latitude)) * cos(deg2rad(y.latitude)) *
+      cos(deg2rad(theta))
+    rad2deg(acos(dist)) * 60 * 1.1515 * 1.609344
+  }
+
+  def deg2rad(deg: Double) = deg * Math.PI / 180.0
+  def rad2deg(rad: Double) = rad * 180 / Math.PI
 }

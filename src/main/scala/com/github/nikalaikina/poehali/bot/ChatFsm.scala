@@ -23,12 +23,27 @@ case class ChatFsm(fp: FlightsProvider, botApi: ActorRef, chatId: Long)
   startWith(CollectingCities, Collecting(Set("VNO"), Set()))
   botApi ! SendCityRequest(chatId, Set("VNO"))
 
+  when(CollectingHomeCities) {
+    case Event(AddCity(city: String), chat: Collecting) =>
+      botApi ! SendTextAnswer(chatId, s"$city added.")
+      stay() using Collecting(chat.homeCities + city, chat.cities)
+
+    case Event(Next, chat: Collecting) =>
+      if (chat.homeCities.isEmpty) {
+        botApi ! SendTextAnswer(chatId, "Add at least one city.")
+        goto(CollectingCities) using chat
+      } else {
+        botApi ! SendCityRequest(chatId, chat.homeCities)
+        goto(CollectingCities) using chat
+      }
+  }
+
   when(CollectingCities) {
     case Event(AddCity(city: String), chat: Collecting) =>
       botApi ! SendCityRequest(chatId, chat.homeCities | chat.cities + city)
       goto(CollectingCities) using Collecting(chat.homeCities, chat.cities + city)
 
-    case Event(Calculate, chat: Collecting) =>
+    case Event(Next, chat: Collecting) =>
       if (chat.cities.isEmpty) {
         botApi ! SendTextAnswer(chatId, "Add at least one city.")
         goto(CollectingCities) using chat
@@ -70,6 +85,7 @@ case class ChatFsm(fp: FlightsProvider, botApi: ActorRef, chatId: Long)
 object ChatFsm {
   sealed trait State
   case object Idle extends State
+  case object CollectingHomeCities extends State
   case object CollectingCities extends State
   case object Result extends State
   case object Calculating extends State
@@ -91,6 +107,6 @@ object ChatFsm {
 
 sealed trait ChatMessage
 case class AddCity(cityId: String) extends ChatMessage
-case object Calculate extends ChatMessage
+case object Next extends ChatMessage
 case class GetDetails(k: Int) extends ChatMessage
 case class Calculated(resultRoutes: ResultRoutes) extends ChatMessage
