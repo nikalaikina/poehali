@@ -3,12 +3,16 @@ package com.github.nikalaikina.poehali.api
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.AskSupport
 import akka.util.Timeout
+import com.github.nikalaikina.poehali.bot.PoehaliBot
 import com.github.nikalaikina.poehali.logic.{Flight, Logic}
 import com.github.nikalaikina.poehali.mesagge.{GetPlaces, GetRoutees, Routes}
 import com.github.nikalaikina.poehali.sp._
+import spray.http.HttpHeaders.`Content-Type`
+import spray.http.MediaTypes
 import spray.routing.RejectionHandler.Default
 import spray.routing._
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -31,22 +35,26 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
 
   def citiesProvider: ActorRef
 
+  import MediaTypes._
   import com.github.nikalaikina.poehali.util.JsonImplicits._
   import play.api.libs.json._
   implicit val timeout = Timeout(10 seconds)
+
 
   def routes: Route =
     pathPrefix("flights") {
       pathEnd {
         get {
-          parameters('homeCities, 'cities, 'dateFrom, 'dateTo, 'daysFrom.as[Int], 'daysTo.as[Int], 'cost.as[Int], 'citiesCount.as[Int])
-          { (homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount) => (ctx: RequestContext) =>
-            val settings = new Settings(homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount)
-            (logic(settings) ? GetRoutees)
-              .mapTo[Routes]
-              .map(r => r.routes.map(tr => JsonRoute(tr.flights)))
-              .map { x => ctx.complete(Json.toJson(x).toString) }
-
+          parameters('homeCities, 'cities, 'dateFrom, 'dateTo, 'daysFrom.as[Int], 'daysTo.as[Int], 'cost.as[Int], 'citiesCount.as[Int]) {
+            (homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount) =>  {
+              respondWithMediaType(`application/json`) { (ctx: RequestContext) =>
+                val settings = new Settings(homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount)
+                (logic(settings) ? GetRoutees)
+                  .mapTo[Routes]
+                  .map(r => r.routes.map(tr => JsonRoute(tr.flights)))
+                  .map { x => ctx.complete(Json.toJson(x).toString) }
+              }
+            }
           }
         }
       }
@@ -61,10 +69,12 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
     pathPrefix("cities") {
       pathEnd {
         get {
-          parameters('number.as[Int]) { (number) => (ctx: RequestContext) =>
-            (citiesProvider ? GetPlaces(number))
-              .mapTo[List[City]]
-              .map { x => ctx.complete(Json.toJson(x).toString) }
+          parameters('number.as[Int]) { (number) =>
+            respondWithMediaType(`application/json`) { (ctx: RequestContext) =>
+              (citiesProvider ? GetPlaces(number))
+                .mapTo[List[City]]
+                .map { x => ctx.complete(Json.toJson(x).toString) }
+            }
           }
         }
       }
