@@ -61,7 +61,7 @@ class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor w
   }
 
   on("/start") { implicit msg => _ =>
-    chats.put(msg.sender, newChat())
+    chats += msg.sender -> newChat()
     api.request(SendMessage(Left(msg.sender), "Send location:",
       replyMarkup = Option(ReplyKeyboardMarkup(Seq(Seq(KeyboardButton("/send", requestLocation = Some(true))))))))
   }
@@ -97,7 +97,7 @@ class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor w
   }
 
   def newChat()(implicit msg: Message): ActorRef = {
-    system.actorOf(Props(classOf[ChatFsm], fp, self, msg.sender))
+    context.actorOf(Props(classOf[ChatFsm], fp, self, msg.sender))
   }
 
   def citiesMarkup(buttons: Seq[KeyboardButton], n: Int): ReplyKeyboardMarkup = {

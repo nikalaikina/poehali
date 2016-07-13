@@ -13,7 +13,7 @@ import spray.routing.RejectionHandler.Default
 import spray.routing._
 
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -28,6 +28,10 @@ class RestInterface(fp: FlightsProvider, cp: ActorRef) extends HttpServiceActor 
 case class JsonRoute(flights: List[Flight])
 
 trait RestApi extends HttpService { actor: Actor with AskSupport =>
+
+  implicit val ec = ExecutionContext.fromExecutorService(
+    java.util.concurrent.Executors.newCachedThreadPool()
+  )
 
   implicit val system: ActorSystem
 
@@ -48,7 +52,7 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
           parameters('homeCities, 'cities, 'dateFrom, 'dateTo, 'daysFrom.as[Int], 'daysTo.as[Int], 'cost.as[Int], 'citiesCount.as[Int]) {
             (homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount) =>  {
               respondWithMediaType(`application/json`) { (ctx: RequestContext) =>
-                val settings = new Settings(homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount)
+                val settings = new Trip(homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount)
                 (logic(settings) ? GetRoutees)
                   .mapTo[Routes]
                   .map(r => r.routes.map(tr => JsonRoute(tr.flights)))
@@ -81,5 +85,5 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
     }
 
 
-  def logic(settings: Settings) = context.actorOf(Props(classOf[Logic], settings, flightsProvider))
+  def logic(settings: Trip) = context.actorOf(Props(classOf[Logic], settings, flightsProvider))
 }

@@ -4,7 +4,7 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit.DAYS
 
 import akka.actor.{Actor, ActorContext, Props}
-import com.github.nikalaikina.poehali.api.Settings
+import com.github.nikalaikina.poehali.api.Trip
 import com.github.nikalaikina.poehali.mesagge.{GetRoutees, Routes}
 import com.github.nikalaikina.poehali.sp.{Direction, FlightsProvider}
 
@@ -12,7 +12,7 @@ import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extends Actor {
+class Logic(val settings: Trip, val flightsProvider: FlightsProvider) extends Actor {
 
   def answer(): List[TripRoute] = {
     var queue = mutable.Queue[TripRoute]()
@@ -68,6 +68,6 @@ class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extend
 }
 
 object Logic {
-  def logic(settings: Settings, flightsProvider: FlightsProvider)(implicit context: ActorContext)
+  def logic(settings: Trip, flightsProvider: FlightsProvider)(implicit context: ActorContext)
   = context.actorOf(Props(classOf[Logic], settings, flightsProvider))
 }

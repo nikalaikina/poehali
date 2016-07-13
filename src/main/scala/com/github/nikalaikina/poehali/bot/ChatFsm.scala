@@ -5,20 +5,23 @@ import java.time.LocalDate
 import akka.actor.{ActorRef, FSM}
 import akka.pattern.AskSupport
 import akka.util.Timeout
-import com.github.nikalaikina.poehali.api.Settings
+import com.github.nikalaikina.poehali.api.Trip
 import com.github.nikalaikina.poehali.bot.ChatFsm._
 import com.github.nikalaikina.poehali.logic.{Logic, TripRoute}
 import com.github.nikalaikina.poehali.mesagge.{GetRoutees, Routes}
 import com.github.nikalaikina.poehali.sp.FlightsProvider
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 case class ChatFsm(fp: FlightsProvider, botApi: ActorRef, chatId: Long)
   extends FSM[ChatFsm.State, ChatFsm.Data] with AskSupport {
+
+  implicit val ec = ExecutionContext.fromExecutorService(
+    java.util.concurrent.Executors.newCachedThreadPool()
+  )
 
   startWith(CollectingHomeCities, Collecting(Set(), Set()))
 
@@ -73,7 +76,7 @@ case class ChatFsm(fp: FlightsProvider, botApi: ActorRef, chatId: Long)
   implicit val timeout = Timeout(1000 seconds)
 
   def calc(chat: Collecting): Future[List[TripRoute]] = {
-    val settings = Settings(chat.homeCities, chat.homeCities ++ chat.cities, LocalDate.now(), LocalDate.now().plusMonths(8), 4, 30, 1000, Math.min(2, chat.cities.size - 3))
+    val settings = Trip(chat.homeCities, chat.homeCities ++ chat.cities, LocalDate.now(), LocalDate.now().plusMonths(8), 4, 30, 1000, Math.min(2, chat.cities.size - 3))
     (Logic.logic(settings, fp) ? GetRoutees)
       .mapTo[Routes]
       .map(_.routes)
