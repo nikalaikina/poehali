@@ -7,7 +7,7 @@ package object mesagge {
 
   sealed trait Request
   case object GetRoutees extends Request
-  case class GetPlaces(number: Int) extends Request
+  case class GetPlaces(number: Int = Integer.MAX_VALUE) extends Request
 
   sealed trait Response
   case class Routes(routes: List[TripRoute]) extends Response

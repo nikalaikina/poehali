@@ -3,7 +3,7 @@ package com.github.nikalaikina.poehali.logic
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit.DAYS
 
-import akka.actor.Actor
+import akka.actor.{Actor, ActorContext, Props}
 import com.github.nikalaikina.poehali.api.Settings
 import com.github.nikalaikina.poehali.mesagge.{GetRoutees, Routes}
 import com.github.nikalaikina.poehali.sp.{Direction, FlightsProvider}
@@ -35,7 +35,7 @@ class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extend
     (route.flights.size > 1
       && settings.homeCities.contains(route.curCity)
       && route.cost < settings.cost
-      && route.cities(settings.homeCities) >= settings.citiesCount
+      && route.citiesCount(settings.homeCities) >= settings.citiesCount
       && route.days >= settings.daysFrom
       && route.days <= settings.daysTo)
   }
@@ -50,7 +50,7 @@ class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extend
   }
 
   private def getFlights(route: TripRoute, city: String) = {
-    flightsProvider.getFlights(Direction(route.curCity, city), route.curDate.plusDays(1), route.curDate.plusDays(settings.daysTo))
+    flightsProvider.getFlights(Direction(route.curCity, city), route.curDate.plusDays(2), route.curDate.plusDays(settings.daysTo))
   }
 
   private def getFirstDays: IndexedSeq[LocalDate] = {
@@ -65,4 +65,9 @@ class Logic(val settings: Settings, val flightsProvider: FlightsProvider) extend
       sender() ! Routes(answer())
       context.stop(self)
   }
+}
+
+object Logic {
+  def logic(settings: Settings, flightsProvider: FlightsProvider)(implicit context: ActorContext)
+  = context.actorOf(Props(classOf[Logic], settings, flightsProvider))
 }

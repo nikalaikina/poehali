@@ -17,9 +17,11 @@ class TripRoute(val firstCity: String, val firstDate: LocalDate) {
 
   def days = if (flights.isEmpty) 0L else DAYS.between(firstDate, flights.last.date)
 
-  def cities(except: List[String]) = {
+  def citiesCount(except: Set[String]) = {
     flights.map(_.direction.to).distinct.count(c => !except.contains(c))
   }
+
+  def cities(except: Set[String]): Set[String] = flights.map(_.direction.to).distinct.toSet
 
   def cost = flights.map(_.price).sum
 
