@@ -34,12 +34,14 @@ class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor w
       case Some (location) =>
         val buttons = cities
           .values
+          .filter(c => UsedCities.cities.contains(c.id))
           .toList
-          .sortBy (c => DistanceCalculator.distance (location, c.location))
-          .take (5)
-          .map (c => new KeyboardButton (c.name) )
-        api.request (SendMessage (Left (msg.sender), "Choose home city:",
-        replyMarkup = Option(citiesMarkup(buttons, 3))))
+          .sortBy(c => DistanceCalculator.distance (location, c.location))
+          .take(5)
+          .map(c => new KeyboardButton (c.name))
+        api.request(SendMessage(chatId = Left(msg.sender),
+                                text = "Choose home city:",
+                                replyMarkup = Option(citiesMarkup(buttons, 3))))
       case None =>
     }
 

@@ -20,8 +20,7 @@ import scala.util.{Failure, Success}
 case class ChatFsm(fp: FlightsProvider, botApi: ActorRef, chatId: Long)
   extends FSM[ChatFsm.State, ChatFsm.Data] with AskSupport {
 
-  startWith(CollectingCities, Collecting(Set("VNO"), Set()))
-  botApi ! SendCityRequest(chatId, Set("VNO"))
+  startWith(CollectingHomeCities, Collecting(Set(), Set()))
 
   when(CollectingHomeCities) {
     case Event(AddCity(city: String), chat: Collecting) =>
