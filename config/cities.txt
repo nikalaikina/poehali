@@ -20,6 +20,5 @@ LIS
 OSL
 VIE
 RIX
-kiev
 KBP
 DME

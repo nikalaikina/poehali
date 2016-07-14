@@ -5,13 +5,12 @@ import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
 import com.github.nikalaikina.poehali.api.RestInterface
-import com.github.nikalaikina.poehali.bot.{Formatter, PoehaliBot}
-import com.github.nikalaikina.poehali.config.UsedCities
-import com.github.nikalaikina.poehali.mesagge.GetPlaces
-import com.github.nikalaikina.poehali.sp.{City, FlightsProvider, PlacesActor}
+import com.github.nikalaikina.poehali.bot.{Cities, PoehaliBot}
+import com.github.nikalaikina.poehali.message.GetPlaces
+import com.github.nikalaikina.poehali.sp.{City, FlightsProvider, PlacesProvider, SpApi}
 import spray.can.Http
 
-import scala.collection.mutable
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import scalacache.ScalaCache
 import scalacache.guava.GuavaCache
@@ -25,9 +24,10 @@ object Boot extends App {
 
   implicit val cache = ScalaCache(GuavaCache())
 
-  private val fp: FlightsProvider = new FlightsProvider()
-  private val placesActor: ActorRef = system.actorOf(PlacesActor.props())
-  val api = system.actorOf(Props(classOf[RestInterface], fp, placesActor), "httpInterface")
+  private val spApi: ActorRef = system.actorOf(Props(classOf[SpApi]), "spApi")
+  system.actorOf(FlightsProvider.props(spApi), "flightsProvider")
+  private val placesActor: ActorRef = system.actorOf(PlacesProvider.props(spApi), "placesProvider")
+  val api = system.actorOf(Props(classOf[RestInterface], placesActor), "httpInterface")
 
   runBot()
 
@@ -45,13 +45,13 @@ object Boot extends App {
     }
 
   def runBot(): Unit = {
-    implicit val timeout: Timeout = Timeout(1000 seconds)
-    (placesActor ? GetPlaces())
+    val future: Future[Any] = placesActor ? GetPlaces()
+    val eventualCities: Future[List[City]] = future
       .mapTo[List[City]]
+    eventualCities
       .map(list => {
         val fullMap: Map[String, City] = list.map(c => c.id -> c).toMap
-
-        system.actorOf(Props(classOf[PoehaliBot], fp, fullMap), "bot")
+        system.actorOf(Props(classOf[PoehaliBot], Cities(fullMap)), "bot")
       })
 
   }
