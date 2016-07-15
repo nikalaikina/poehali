@@ -3,29 +3,26 @@ package com.github.nikalaikina.poehali.api
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.AskSupport
 import akka.util.Timeout
-import com.github.nikalaikina.poehali.bot.PoehaliBot
-import com.github.nikalaikina.poehali.logic.{Flight, Logic}
-import com.github.nikalaikina.poehali.mesagge.{GetPlaces, GetRoutees, Routes}
+import com.github.nikalaikina.poehali.logic.Logic
+import com.github.nikalaikina.poehali.message.{GetPlaces, GetRoutees, Routes}
 import com.github.nikalaikina.poehali.sp._
-import spray.http.HttpHeaders.`Content-Type`
+import com.github.nikalaikina.poehali.to.JsonRoute
 import spray.http.MediaTypes
 import spray.routing.RejectionHandler.Default
 import spray.routing._
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class RestInterface(fp: FlightsProvider, cp: ActorRef) extends HttpServiceActor with AskSupport with RestApi {
+
+class RestInterface(cp: ActorRef) extends HttpServiceActor with AskSupport with RestApi {
   implicit val system = context.system
-  override def flightsProvider = fp
   override def citiesProvider: ActorRef = cp
 
   def receive = runRoute(routes)
 }
 
-case class JsonRoute(flights: List[Flight])
 
 trait RestApi extends HttpService { actor: Actor with AskSupport =>
 
@@ -35,14 +32,12 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
 
   implicit val system: ActorSystem
 
-  def flightsProvider: FlightsProvider
-
   def citiesProvider: ActorRef
 
   import MediaTypes._
   import com.github.nikalaikina.poehali.util.JsonImplicits._
   import play.api.libs.json._
-  implicit val timeout = Timeout(10 seconds)
+  implicit val timeout = Timeout(500 seconds)
 
 
   def routes: Route =
@@ -84,6 +79,5 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
       }
     }
 
-
-  def logic(settings: Trip) = context.actorOf(Props(classOf[Logic], settings, flightsProvider))
+  def logic(trip: Trip) = context.actorOf(Props(classOf[Logic], trip))
 }

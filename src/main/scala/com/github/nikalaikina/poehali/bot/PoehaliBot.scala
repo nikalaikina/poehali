@@ -1,24 +1,24 @@
 package com.github.nikalaikina.poehali.bot
 
-import java.lang.Math.{acos, cos, sin}
-
-import akka.actor.{Actor, ActorRef, Props}
-import akka.pattern.AskSupport
-import com.github.nikalaikina.poehali.config.UsedCities
-import com.github.nikalaikina.poehali.logic.{Flight, TripRoute}
-import com.github.nikalaikina.poehali.sp.{City, FlightsProvider}
+import akka.actor.{ActorRef, Props}
+import com.github.nikalaikina.poehali.common.AbstractActor
+import com.github.nikalaikina.poehali.logic.TripRoute
 import info.mukel.telegrambot4s.api.{Commands, Polling, TelegramBot}
 import info.mukel.telegrambot4s.methods.{ParseMode, SendMessage}
 import info.mukel.telegrambot4s.models._
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
 
 object MessagePatterns {
   val NumberPattern = "(\\d+)".r
   val CityPattern = "(^[A-Z][a-z]+)".r
 }
 
-class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor with AbstractBot with AskSupport {
+class PoehaliBot(cities: Cities) extends AbstractActor with AbstractBot  {
+  override implicit val ec = ExecutionContext.fromExecutorService(
+    java.util.concurrent.Executors.newCachedThreadPool()
+  )
 
   import MessagePatterns._
 
@@ -33,11 +33,7 @@ class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor w
     msg.location match {
       case Some (location) =>
         val buttons = cities
-          .values
-          .filter(c => UsedCities.cities.contains(c.id))
-          .toList
-          .sortBy(c => DistanceCalculator.distance (location, c.location))
-          .take(5)
+          .closest(location, 5, usedOnly = true)
           .map(c => new KeyboardButton (c.name))
         api.request(SendMessage(chatId = Left(msg.sender),
                                 text = "Choose home city:",
@@ -45,14 +41,13 @@ class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor w
       case None =>
     }
 
-
     msg.text match {
       case Some(text) => text match {
         case NumberPattern(n) =>
           getChat() ! GetDetails(n.toInt)
         case CityPattern(cityName) =>
-          UsedCities.cities
-            .find(id => cities(id).name == cityName)
+          cities
+            .idByName(cityName)
             .foreach(id => getChat() ! AddCity(id))
         case x => super.handleMessage(msg)
       }
@@ -72,7 +67,7 @@ class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor w
 
   override def receive: Receive = {
     case SendTextAnswer(id, text) =>
-      api.request(SendMessage( Left(id), text))
+      api.request(SendMessage(Left(id), text))
 
     case SendBestRoutes(id, routes) =>
       api.request(SendMessage(Left(id), s"${formatter.getResult(id, routes)} \n\nGet details:",
@@ -82,9 +77,8 @@ class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor w
       api.request(SendMessage(Left(id), s"Details: \n${formatter.getDetails(id, route)}", Some(ParseMode.Markdown)))
 
     case SendCityRequest(id, except) =>
-      val buttons: Seq[KeyboardButton] = cities.values
-        .filter(c => !except.contains(c.id))
-        .filter(c => UsedCities.cities.contains(c.id))
+      val buttons: Seq[KeyboardButton] = cities
+        .except(except, usedOnly = true)
         .map(c => KeyboardButton(c.name))
         .toSeq
 
@@ -97,49 +91,21 @@ class PoehaliBot(fp: FlightsProvider, cities: Map[String, City]) extends Actor w
   }
 
   def newChat()(implicit msg: Message): ActorRef = {
-    context.actorOf(Props(classOf[ChatFsm], fp, self, msg.sender))
+    context.actorOf(Props(classOf[ChatFsm], self, msg.sender))
   }
 
   def citiesMarkup(buttons: Seq[KeyboardButton], n: Int): ReplyKeyboardMarkup = {
     ReplyKeyboardMarkup(getMarkup(buttons, n) :+ Seq(KeyboardButton("/end")))
   }
 
-  def detailsMarkup(buttons: Int, n: Int): ReplyKeyboardMarkup = {
-    val buttons1 = (1 to buttons).map(i => KeyboardButton(i.toString))
-    ReplyKeyboardMarkup(getMarkup(buttons1, n) :+ Seq(KeyboardButton("/start")))
+  def detailsMarkup(number: Int, rowLength: Int): ReplyKeyboardMarkup = {
+    ReplyKeyboardMarkup(getMarkup((1 to number).map(i => KeyboardButton(i.toString)), rowLength) :+ Seq(KeyboardButton("/start")))
   }
 
-  def getMarkup(buttons: Seq[KeyboardButton], n: Int): Seq[Seq[KeyboardButton]] = {
-    (0 to buttons.size / n + 1)
-      .foldLeft(Seq[Seq[KeyboardButton]]())((seq, i) =>  seq :+ buttons.slice(i * n, i * n + n))
-  }
-}
-
-case class Formatter(cities: Map[String, City]) {
-
-  def getDetails(person: Long, route: TripRoute): String = {
-    route.flights.map(flightFormat).mkString("\n")
-  }
-
-  def getResult(person: Long, result: List[TripRoute]): String = {
-    val list = for ((route, i) <- result.zipWithIndex)
-      yield s"`${i + 1}. `${tripFormat(route)}\n"
-    list.mkString("\n")
-  }
-
-  def flightFormat(flight: Flight): String = {
-    s"`${flight.direction.from.cityName} -> ${flight.direction.to.cityName}\t${flight.date}\t${flight.price}`"
-  }
-
-  def tripFormat(route: TripRoute): String = {
-    val firstCity: String = route.flights.head.direction.from.cityName
-    val citiesString = (firstCity :: route.flights.map(f => f.direction.to.cityName)).mkString(" -> ")
-
-    s"*${route.cost}$$* *|* $citiesString *|* ${route.firstDate} - ${route.curDate}"
-  }
-
-  implicit class Imp(val s: String) {
-    implicit def cityName: String = cities(s).name
+  def getMarkup(buttons: Seq[KeyboardButton], rowLength: Int): Seq[Seq[KeyboardButton]] = {
+    def row(i: Int) = buttons.slice(i * rowLength, i * rowLength + rowLength)
+    (0 to buttons.size / rowLength + 1)
+      .foldLeft(Seq[Seq[KeyboardButton]]())((seq, i) =>  seq :+ row(i))
   }
 }
 
@@ -153,18 +119,4 @@ case class SendRouteDetails(id: Long, route: TripRoute)
 
 trait AbstractBot extends TelegramBot with Polling with Commands {
   def token = Source.fromFile("config/bot.token").getLines().next
-}
-
-object DistanceCalculator
-{
-  def distance(x: Location, y: Location) = {
-    val theta = x.longitude - y.longitude
-    val dist = sin(deg2rad(x.latitude)) * sin(deg2rad(y.latitude)) +
-      cos(deg2rad(x.latitude)) * cos(deg2rad(y.latitude)) *
-      cos(deg2rad(theta))
-    rad2deg(acos(dist)) * 60 * 1.1515 * 1.609344
-  }
-
-  def deg2rad(deg: Double) = deg * Math.PI / 180.0
-  def rad2deg(rad: Double) = rad * 180 / Math.PI
 }
