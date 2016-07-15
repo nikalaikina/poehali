@@ -2,72 +2,92 @@ package com.github.nikalaikina.poehali.logic
 
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit.DAYS
+import java.util.concurrent.atomic.AtomicInteger
 
-import akka.actor.{Actor, ActorContext, Props}
+import akka.actor._
 import com.github.nikalaikina.poehali.api.Trip
-import com.github.nikalaikina.poehali.mesagge.{GetRoutees, Routes}
-import com.github.nikalaikina.poehali.sp.{Direction, FlightsProvider}
+import com.github.nikalaikina.poehali.common.AbstractActor
+import com.github.nikalaikina.poehali.message
+import com.github.nikalaikina.poehali.message.{GetFlights, GetRoutees, Routes}
+import com.github.nikalaikina.poehali.sp.Direction
 
 import scala.collection.immutable.IndexedSeq
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.language.postfixOps
+import scala.util.Success
 
-class Logic(val settings: Trip, val flightsProvider: FlightsProvider) extends Actor {
+class Logic(val trip: Trip) extends AbstractActor {
 
-  def answer(): List[TripRoute] = {
-    var queue = mutable.Queue[TripRoute]()
-    queue ++= (for (city <- settings.homeCities; day <- getFirstDays) yield new TripRoute(city, day))
-    var routes = new ListBuffer[TripRoute]()
-
-    while (queue.nonEmpty) {
-      val current = queue.dequeue
-      if (isFine(current)) {
-        routes += current
-      } else if (current.days < settings.daysTo && current.cost < settings.cost) {
-        processNode(queue, current)
-      }
-    }
-
-    routes.sortBy(_.cost).toList
-  }
+  var sender_ = Actor.noSender
+  var routes = new ListBuffer[TripRoute]()
+  val count = new AtomicInteger()
+  val flightsProvider = context
+    .actorSelection("/user/flightsProvider")
+    .resolveOne(100 second)
 
   private def isFine(route: TripRoute): Boolean = {
     (route.flights.size > 1
-      && settings.homeCities.contains(route.curCity)
-      && route.cost < settings.cost
-      && route.citiesCount(settings.homeCities) >= settings.citiesCount
-      && route.days >= settings.daysFrom
-      && route.days <= settings.daysTo)
+      && trip.homeCities.contains(route.curCity)
+      && route.cost < trip.cost
+      && route.citiesCount(trip.homeCities) >= trip.citiesCount
+      && route.days >= trip.daysFrom
+      && route.days <= trip.daysTo)
   }
 
-  private def processNode(queue: mutable.Queue[TripRoute], current: TripRoute) = {
-    for (city <- settings.cities; if current.curCity != city) {
-      val flights = getFlights(current, city)
-      if (flights.nonEmpty) {
-        queue += new TripRoute(current, flights.minBy(_.price))
+  private def processNode(current: TripRoute): Unit = {
+    if (isFine(current)) {
+      routes.synchronized { routes += current }
+    } else if (current.days < trip.daysTo && current.cost < trip.cost) {
+      for (city <- trip.cities; if current.curCity != city) {
+        count.incrementAndGet()
+        getFlights(current, city)
+          .map(flights => (current, flights))
+          .onComplete {
+            case Success((route, List())) =>
+              nodeProcessed()
+            case Success((route, flights)) =>
+              processNode(new TripRoute(current, flights.minBy(_.price)))
+              nodeProcessed()
+            case x => throw new RuntimeException(x.toString)
+          }
       }
     }
   }
 
-  private def getFlights(route: TripRoute, city: String) = {
-    flightsProvider.getFlights(Direction(route.curCity, city), route.curDate.plusDays(2), route.curDate.plusDays(settings.daysTo))
+  def nodeProcessed(): Unit = {
+    if (count.decrementAndGet() == 0) {
+      sender_ ! Routes(routes.sortBy(_.cost).toList)
+      context.stop(self)
+    }
+  }
+
+  private def getFlights(route: TripRoute, city: String): Future[List[Flight]] = {
+    flightsProvider.flatMap(fp => (fp ? fpMessage(route, city)).mapTo[List[Flight]])
+  }
+
+  def fpMessage(route: TripRoute, city: String): message.GetFlights = {
+    GetFlights(Direction(route.curCity, city), route.curDate.plusDays(2), route.curDate.plusDays(trip.daysTo))
   }
 
   private def getFirstDays: IndexedSeq[LocalDate] = {
-    val from = settings.dateFrom
-    val to = settings.dateTo.minusDays(settings.daysFrom)
+    val from = trip.dateFrom
+    val to = trip.dateTo.minusDays(trip.daysFrom)
     val n = DAYS.between(from, to).toInt
     for (i <- 1 to n) yield from.plusDays(i)
   }
 
   override def receive: Receive = {
     case GetRoutees =>
-      sender() ! Routes(answer())
-      context.stop(self)
+      sender_ = sender()
+      for (city <- trip.homeCities; day <- getFirstDays)
+        processNode(new TripRoute(city, day))
   }
 }
 
 object Logic {
-  def logic(settings: Trip, flightsProvider: FlightsProvider)(implicit context: ActorContext)
-  = context.actorOf(Props(classOf[Logic], settings, flightsProvider))
+  def logic(trip: Trip)(implicit context: ActorContext) = {
+    context.actorOf(Props(classOf[Logic], trip))
+  }
 }
