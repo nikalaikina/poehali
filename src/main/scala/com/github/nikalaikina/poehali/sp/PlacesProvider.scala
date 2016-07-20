@@ -4,6 +4,7 @@ import akka.actor.{ActorRef, Props}
 import akka.pattern.pipe
 import com.github.nikalaikina.poehali.common.AbstractActor
 import com.github.nikalaikina.poehali.message.GetPlaces
+import com.github.nikalaikina.poehali.model.City
 
 import scala.concurrent.Future
 import scala.concurrent.duration._

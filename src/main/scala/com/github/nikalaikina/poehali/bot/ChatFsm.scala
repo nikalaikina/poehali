@@ -3,11 +3,10 @@ package com.github.nikalaikina.poehali.bot
 import java.time.LocalDate
 
 import akka.actor.{ActorRef, FSM}
-import com.github.nikalaikina.poehali.api.Trip
 import com.github.nikalaikina.poehali.bot.ChatFsm._
 import com.github.nikalaikina.poehali.common.AbstractActor
-import com.github.nikalaikina.poehali.logic.{Logic, TripRoute}
 import com.github.nikalaikina.poehali.message.{GetRoutees, Routes}
+import com.github.nikalaikina.poehali.model.{Trip, TripRoute}
 
 import scala.concurrent.Future
 import scala.language.postfixOps
@@ -68,7 +67,7 @@ case class ChatFsm(botApi: ActorRef, chatId: Long)
 
   def calc(chat: Collecting): Future[List[TripRoute]] = {
     val settings = Trip(chat.homeCities, chat.homeCities ++ chat.cities, LocalDate.now(), LocalDate.now().plusMonths(8), 4, 30, 1000, Math.min(2, chat.cities.size - 3))
-    (Logic.logic(settings) ? GetRoutees)
+    (TripsCalculator.logic(settings) ? GetRoutees)
       .mapTo[Routes]
       .map(_.routes)
   }

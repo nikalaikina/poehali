@@ -1,11 +1,15 @@
-package com.github.nikalaikina.poehali.logic
+package com.github.nikalaikina.poehali.model
 
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit.DAYS
 
-import com.github.nikalaikina.poehali.sp.Direction
+import info.mukel.telegrambot4s.models.Location
+
+case class Direction(from: String, to: String)
 
 case class Flight(direction: Direction, price: Float, date: LocalDate, timeFrom: Long, timeTo: Long)
+
+case class City(id: String, name: String, score: Int, location: Location)
 
 class TripRoute(val firstCity: String, val firstDate: LocalDate) {
   var flights: List[Flight] = List()

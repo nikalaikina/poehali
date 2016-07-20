@@ -1,7 +1,7 @@
 package com.github.nikalaikina.poehali.bot
 
 import com.github.nikalaikina.poehali.config.UsedCities
-import com.github.nikalaikina.poehali.sp.City
+import com.github.nikalaikina.poehali.model.City
 import com.github.nikalaikina.poehali.util.DistanceCalculator
 import info.mukel.telegrambot4s.models.Location
 

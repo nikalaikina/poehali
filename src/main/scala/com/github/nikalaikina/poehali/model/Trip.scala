@@ -1,4 +1,4 @@
-package com.github.nikalaikina.poehali.api
+package com.github.nikalaikina.poehali.model
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter

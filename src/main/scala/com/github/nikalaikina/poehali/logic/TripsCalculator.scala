@@ -5,11 +5,10 @@ import java.time.temporal.ChronoUnit.DAYS
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.actor._
-import com.github.nikalaikina.poehali.api.Trip
 import com.github.nikalaikina.poehali.common.AbstractActor
 import com.github.nikalaikina.poehali.message
 import com.github.nikalaikina.poehali.message.{GetFlights, GetRoutees, Routes}
-import com.github.nikalaikina.poehali.sp.Direction
+import com.github.nikalaikina.poehali.model.{Direction, Flight, Trip, TripRoute}
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable.ListBuffer
@@ -18,7 +17,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.Success
 
-class Logic(val trip: Trip) extends AbstractActor {
+class TripsCalculator(val trip: Trip) extends AbstractActor {
 
   var sender_ = Actor.noSender
   var routes = new ListBuffer[TripRoute]()
@@ -86,8 +85,8 @@ class Logic(val trip: Trip) extends AbstractActor {
   }
 }
 
-object Logic {
+object TripsCalculator {
   def logic(trip: Trip)(implicit context: ActorContext) = {
-    context.actorOf(Props(classOf[Logic], trip))
+    context.actorOf(Props(classOf[TripsCalculator], trip))
   }
 }
