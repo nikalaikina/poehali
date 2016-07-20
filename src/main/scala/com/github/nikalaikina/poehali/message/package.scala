@@ -2,8 +2,7 @@ package com.github.nikalaikina.poehali
 
 import java.time.LocalDate
 
-import com.github.nikalaikina.poehali.logic.TripRoute
-import com.github.nikalaikina.poehali.sp.Direction
+import com.github.nikalaikina.poehali.model.{Direction, TripRoute}
 
 
 package object message {

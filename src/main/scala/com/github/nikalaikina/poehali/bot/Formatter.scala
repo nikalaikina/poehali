@@ -1,6 +1,6 @@
 package com.github.nikalaikina.poehali.bot
 
-import com.github.nikalaikina.poehali.logic.{Flight, TripRoute}
+import com.github.nikalaikina.poehali.model.{Flight, TripRoute}
 
 class Formatter(cities: Cities) {
 

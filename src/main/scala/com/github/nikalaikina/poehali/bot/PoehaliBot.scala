@@ -2,13 +2,12 @@ package com.github.nikalaikina.poehali.bot
 
 import akka.actor.{ActorRef, Props}
 import com.github.nikalaikina.poehali.common.AbstractActor
-import com.github.nikalaikina.poehali.logic.TripRoute
+import com.github.nikalaikina.poehali.model.TripRoute
 import info.mukel.telegrambot4s.api.{Commands, Polling, TelegramBot}
 import info.mukel.telegrambot4s.methods.{ParseMode, SendMessage}
 import info.mukel.telegrambot4s.models._
 
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext
 
 object MessagePatterns {
   val NumberPattern = "(\\d+)".r
@@ -16,9 +15,8 @@ object MessagePatterns {
 }
 
 class PoehaliBot(cities: Cities) extends AbstractActor with AbstractBot  {
-  override implicit val ec = ExecutionContext.fromExecutorService(
-    java.util.concurrent.Executors.newCachedThreadPool()
-  )
+
+  override val log = super[AbstractActor].log
 
   import MessagePatterns._
 

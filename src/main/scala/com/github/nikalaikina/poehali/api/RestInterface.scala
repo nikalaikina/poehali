@@ -3,11 +3,12 @@ package com.github.nikalaikina.poehali.api
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.AskSupport
 import akka.util.Timeout
-import com.github.nikalaikina.poehali.logic.Logic
 import com.github.nikalaikina.poehali.message.{GetPlaces, GetRoutees, Routes}
-import com.github.nikalaikina.poehali.sp._
+import com.github.nikalaikina.poehali.model.{City, Trip}
 import com.github.nikalaikina.poehali.to.JsonRoute
+import spray.http.HttpHeaders.RawHeader
 import spray.http.MediaTypes
+import spray.routing
 import spray.routing.RejectionHandler.Default
 import spray.routing._
 
@@ -41,43 +42,54 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
 
 
   def routes: Route =
-    pathPrefix("flights") {
-      pathEnd {
-        get {
-          parameters('homeCities, 'cities, 'dateFrom, 'dateTo, 'daysFrom.as[Int], 'daysTo.as[Int], 'cost.as[Int], 'citiesCount.as[Int]) {
-            (homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount) =>  {
+    respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {(
+      pathPrefix("flights") {
+        pathEnd {
+          get {
+            parameters('homeCities, 'cities, 'dateFrom, 'dateTo, 'daysFrom.as[Int], 'daysTo.as[Int], 'cost.as[Int], 'citiesCount.as[Int]) {
+              processFlightsRequest
+            }
+          } ~
+          post {
+            formField('homeCities, 'cities, 'dateFrom, 'dateTo, 'daysFrom.as[Int], 'daysTo.as[Int], 'cost.as[Int], 'citiesCount.as[Int]) {
+              processFlightsRequest
+            }
+          }
+        }
+      } ~
+      pathPrefix("status") {
+        pathEnd {
+          get {
+            complete("ok")
+          }
+        }
+      } ~
+      pathPrefix("cities") {
+        pathEnd {
+          get {
+            parameters('number.as[Int]) { (number) =>
               respondWithMediaType(`application/json`) { (ctx: RequestContext) =>
-                val settings = new Trip(homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount)
-                (logic(settings) ? GetRoutees)
-                  .mapTo[Routes]
-                  .map(r => r.routes.map(tr => JsonRoute(tr.flights)))
+                (citiesProvider ? GetPlaces(number))
+                  .mapTo[List[City]]
                   .map { x => ctx.complete(Json.toJson(x).toString) }
               }
             }
           }
         }
-      }
-    } ~
-    pathPrefix("status") {
-      pathEnd {
-        get {
-          complete("ok")
-        }
-      }
-    } ~
-    pathPrefix("cities") {
-      pathEnd {
-        get {
-          parameters('number.as[Int]) { (number) =>
-            respondWithMediaType(`application/json`) { (ctx: RequestContext) =>
-              (citiesProvider ? GetPlaces(number))
-                .mapTo[List[City]]
-                .map { x => ctx.complete(Json.toJson(x).toString) }
-            }
-          }
-        }
-      }
+      })
     }
 
-  def logic(trip: Trip) = context.actorOf(Props(classOf[Logic], trip))
+  def processFlightsRequest: (String, String, String, String, Int, Int, Int, Int) => routing.Route = {
+    (homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount) => {
+      respondWithMediaType(`application/json`) { (ctx: RequestContext) =>
+        val settings = new Trip(homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount)
+        (logic(settings) ? GetRoutees)
+          .mapTo[Routes]
+          .map(r => r.routes.map(tr => JsonRoute(tr.flights)))
+          .map { x => ctx.complete(Json.toJson(x).toString) }
+      }
+    }
+  }
+
+  def logic(trip: Trip) = context.actorOf(Props(classOf[TripsCalculator], trip))
 }

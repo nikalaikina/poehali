@@ -1,7 +1,6 @@
 package com.github.nikalaikina.poehali.util
 
-import com.github.nikalaikina.poehali.logic.Flight
-import com.github.nikalaikina.poehali.sp.{City, Direction}
+import com.github.nikalaikina.poehali.model.{City, Direction, Flight}
 import com.github.nikalaikina.poehali.to.JsonRoute
 import info.mukel.telegrambot4s.models.Location
 import play.api.libs.json.Json

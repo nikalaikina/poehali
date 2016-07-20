@@ -11,7 +11,7 @@ import scala.concurrent.duration._
 trait AbstractActor extends Actor with AskSupport with ActorLogging {
   implicit val timeout = Timeout(600 seconds)
 
-  implicit val ec = ExecutionContext.fromExecutorService(
+  implicit val executionContext = ExecutionContext.fromExecutorService(
     java.util.concurrent.Executors.newCachedThreadPool()
   )
 

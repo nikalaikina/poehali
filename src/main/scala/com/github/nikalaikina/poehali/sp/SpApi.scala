@@ -6,8 +6,8 @@ import java.time.format.DateTimeFormatter
 
 import akka.pattern.pipe
 import com.github.nikalaikina.poehali.common.AbstractActor
-import com.github.nikalaikina.poehali.logic.Flight
 import com.github.nikalaikina.poehali.message.{GetFlights, GetPlaces}
+import com.github.nikalaikina.poehali.model.{City, Direction, Flight}
 import info.mukel.telegrambot4s.models.Location
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
@@ -74,4 +74,3 @@ class SpApi extends AbstractActor {
 
 case class SpCity(id: String, value: String, sp_score: Option[Int], lng: Option[Double], lat: Option[Double])
 
-case class City(id: String, name: String, score: Int, location: Location)

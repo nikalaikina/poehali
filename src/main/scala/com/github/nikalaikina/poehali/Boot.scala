@@ -7,7 +7,8 @@ import akka.util.Timeout
 import com.github.nikalaikina.poehali.api.RestInterface
 import com.github.nikalaikina.poehali.bot.{Cities, PoehaliBot}
 import com.github.nikalaikina.poehali.message.GetPlaces
-import com.github.nikalaikina.poehali.sp.{City, FlightsProvider, PlacesProvider, SpApi}
+import com.github.nikalaikina.poehali.model.City
+import com.github.nikalaikina.poehali.sp.{FlightsProvider, PlacesProvider, SpApi}
 import spray.can.Http
 
 import scala.concurrent.Future
@@ -21,17 +22,15 @@ object Boot extends App {
 
   implicit val system = ActorSystem("routes-service")
   implicit val executionContext = system.dispatcher
-
   implicit val cache = ScalaCache(GuavaCache())
-
-  private val spApi: ActorRef = system.actorOf(Props(classOf[SpApi]), "spApi")
-  system.actorOf(FlightsProvider.props(spApi), "flightsProvider")
-  private val placesActor: ActorRef = system.actorOf(PlacesProvider.props(spApi), "placesProvider")
-  val api = system.actorOf(Props(classOf[RestInterface], placesActor), "httpInterface")
-
-  runBot()
-
   implicit val timeout: Timeout = Timeout(1000 seconds)
+
+  val spApi: ActorRef = system.actorOf(Props(classOf[SpApi]), "spApi")
+  system.actorOf(FlightsProvider.props(spApi), "flightsProvider")
+  val placesActor: ActorRef = system.actorOf(PlacesProvider.props(spApi), "placesProvider")
+
+  val api = system.actorOf(Props(classOf[RestInterface], placesActor), "httpInterface")
+  runBot()
 
   IO(Http).ask(Http.Bind(listener = api, interface = host, port = port))
     .mapTo[Http.Event]
