@@ -13,18 +13,17 @@ import com.github.nikalaikina.poehali.model.{Direction, Flight, Trip, TripRoute}
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
-import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.Success
 
-class TripsCalculator(val trip: Trip) extends AbstractActor {
+class TripsCalculator() extends AbstractActor {
 
+  var trip: Trip = _
   var sender_ = Actor.noSender
   var routes = new ListBuffer[TripRoute]()
   val count = new AtomicInteger()
   val flightsProvider = context
     .actorSelection("/user/flightsProvider")
-    .resolveOne(100 second)
 
   private def isFine(route: TripRoute): Boolean = {
     (route.flights.size > 1
@@ -63,7 +62,7 @@ class TripsCalculator(val trip: Trip) extends AbstractActor {
   }
 
   private def getFlights(route: TripRoute, city: String): Future[List[Flight]] = {
-    flightsProvider.flatMap(fp => (fp ? fpMessage(route, city)).mapTo[List[Flight]])
+    flightsProvider.ask(fpMessage(route, city)).mapTo[List[Flight]]
   }
 
   def fpMessage(route: TripRoute, city: String): message.GetFlights = {
@@ -78,7 +77,8 @@ class TripsCalculator(val trip: Trip) extends AbstractActor {
   }
 
   override def receive: Receive = {
-    case GetRoutees =>
+    case GetRoutees(tripSettings) =>
+      trip = tripSettings
       sender_ = sender()
       for (city <- trip.homeCities; day <- getFirstDays)
         processNode(new TripRoute(city, day))
@@ -86,7 +86,7 @@ class TripsCalculator(val trip: Trip) extends AbstractActor {
 }
 
 object TripsCalculator {
-  def logic(trip: Trip)(implicit context: ActorContext) = {
-    context.actorOf(Props(classOf[TripsCalculator], trip))
+  def logic()(implicit context: ActorContext) = {
+    context.actorOf(Props(classOf[TripsCalculator]))
   }
 }
