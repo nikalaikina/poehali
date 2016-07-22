@@ -5,6 +5,7 @@ import java.time.LocalDate
 import akka.actor.{ActorRef, FSM}
 import com.github.nikalaikina.poehali.bot.ChatFsm._
 import com.github.nikalaikina.poehali.common.AbstractActor
+import com.github.nikalaikina.poehali.logic.TripsCalculator
 import com.github.nikalaikina.poehali.message.{GetRoutees, Routes}
 import com.github.nikalaikina.poehali.model.{Trip, TripRoute}
 
@@ -46,7 +47,7 @@ case class ChatFsm(botApi: ActorRef, chatId: Long)
           case Success(list: List[TripRoute]) =>
             val result = ResultRoutes(chat.homeCities, list)
             self ! Calculated(result)
-          case Failure(e) => println(s"failed: ${e.getMessage}")
+          case Failure(e) => log.error(s"Error during trip calculation: ${e.getMessage}")
         }
         botApi ! SendTextAnswer(chatId, "I'll answer you as soon as I have the results.")
         goto(Calculating) using chat
@@ -66,8 +67,8 @@ case class ChatFsm(botApi: ActorRef, chatId: Long)
   }
 
   def calc(chat: Collecting): Future[List[TripRoute]] = {
-    val settings = Trip(chat.homeCities, chat.homeCities ++ chat.cities, LocalDate.now(), LocalDate.now().plusMonths(8), 4, 30, 1000, Math.min(2, chat.cities.size - 3))
-    (TripsCalculator.logic(settings) ? GetRoutees)
+    val trip = Trip(chat.homeCities, chat.homeCities ++ chat.cities, LocalDate.now(), LocalDate.now().plusMonths(8), 4, 30, 1000, Math.min(2, chat.cities.size - 3))
+    (TripsCalculator.logic() ? GetRoutees(trip))
       .mapTo[Routes]
       .map(_.routes)
   }

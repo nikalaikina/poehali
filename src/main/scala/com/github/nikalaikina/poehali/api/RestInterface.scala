@@ -3,6 +3,7 @@ package com.github.nikalaikina.poehali.api
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.AskSupport
 import akka.util.Timeout
+import com.github.nikalaikina.poehali.logic.TripsCalculator
 import com.github.nikalaikina.poehali.message.{GetPlaces, GetRoutees, Routes}
 import com.github.nikalaikina.poehali.model.{City, Trip}
 import com.github.nikalaikina.poehali.to.JsonRoute
@@ -37,8 +38,8 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
 
   import MediaTypes._
   import com.github.nikalaikina.poehali.util.JsonImplicits._
+  import com.github.nikalaikina.poehali.util.TimeoutImplicits.waitForever
   import play.api.libs.json._
-  implicit val timeout = Timeout(500 seconds)
 
 
   def routes: Route =

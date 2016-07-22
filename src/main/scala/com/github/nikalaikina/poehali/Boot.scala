@@ -17,13 +17,14 @@ import scalacache.ScalaCache
 import scalacache.guava.GuavaCache
 
 object Boot extends App {
-  val host = "localhost"
+  val host = "0.0.0.0"
   val port = 8888
+
+  import com.github.nikalaikina.poehali.util.TimeoutImplicits.waitForever
 
   implicit val system = ActorSystem("routes-service")
   implicit val executionContext = system.dispatcher
   implicit val cache = ScalaCache(GuavaCache())
-  implicit val timeout: Timeout = Timeout(1000 seconds)
 
   val spApi: ActorRef = system.actorOf(Props(classOf[SpApi]), "spApi")
   system.actorOf(FlightsProvider.props(spApi), "flightsProvider")
@@ -36,23 +37,22 @@ object Boot extends App {
     .mapTo[Http.Event]
     .map {
       case Http.Bound(address) =>
-        println(s"REST interface bound to $address")
+        system.log.debug(s"REST interface bound to $address")
       case Http.CommandFailed(cmd) =>
-        println("REST interface could not bind to " +
+        system.log.error("REST interface could not bind to " +
           s"$host:$port, ${cmd.failureMessage}")
-        system.shutdown()
+        system.terminate()
     }
 
   def runBot(): Unit = {
-    val future: Future[Any] = placesActor ? GetPlaces()
-    val eventualCities: Future[List[City]] = future
+    (placesActor ? GetPlaces())
       .mapTo[List[City]]
-    eventualCities
-      .map(list => {
-        val fullMap: Map[String, City] = list.map(c => c.id -> c).toMap
-        system.actorOf(Props(classOf[PoehaliBot], Cities(fullMap)), "bot")
-      })
-
+      .onSuccess {
+        case list: List[City] =>
+          val fullMap: Map[String, City] = list.map(c => c.id -> c).toMap
+          system.actorOf(Props(classOf[PoehaliBot], Cities(fullMap)), "bot")
+        case _ => system.log.error("Bot hasn't been started")
+      }
   }
 
 }
