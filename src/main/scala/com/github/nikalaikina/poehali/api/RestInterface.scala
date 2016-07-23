@@ -2,7 +2,6 @@ package com.github.nikalaikina.poehali.api
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.AskSupport
-import akka.util.Timeout
 import com.github.nikalaikina.poehali.logic.TripsCalculator
 import com.github.nikalaikina.poehali.message.{GetPlaces, GetRoutees, Routes}
 import com.github.nikalaikina.poehali.model.{City, Trip}
@@ -14,7 +13,6 @@ import spray.routing.RejectionHandler.Default
 import spray.routing._
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
@@ -84,7 +82,7 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
     (homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount) => {
       respondWithMediaType(`application/json`) { (ctx: RequestContext) =>
         val settings = new Trip(homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount)
-        (logic(settings) ? GetRoutees)
+        (logic ? GetRoutees(settings))
           .mapTo[Routes]
           .map(r => r.routes.map(tr => JsonRoute(tr.flights)))
           .map { x => ctx.complete(Json.toJson(x).toString) }
@@ -92,5 +90,5 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
     }
   }
 
-  def logic(trip: Trip) = context.actorOf(Props(classOf[TripsCalculator], trip))
+  def logic = context.actorOf(Props(classOf[TripsCalculator]))
 }
