@@ -19,13 +19,12 @@ class PlacesProvider(spApi: ActorRef)(implicit cache: ScalaCache[InMemoryRepr]) 
 
   override def receive: Receive = {
     case GetPlaces(n) =>
-      cachedPlaces pipeTo sender()
+      cachedPlaces.map(l => l.take(n)) pipeTo sender()
   }
 
   def cachedPlaces: Future[List[City]] = {
     sync.cachingWithTTL("places")(24 hours) {
-      val future: Future[Any] = spApi ? GetPlaces
-      future.mapTo[List[City]]
+      (spApi ? GetPlaces).mapTo[List[City]]
     }
   }
 }
