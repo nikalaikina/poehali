@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.AskSupport
 import com.github.nikalaikina.poehali.logic.TripsCalculator
 import com.github.nikalaikina.poehali.message.{GetPlaces, GetRoutees, Routes}
-import com.github.nikalaikina.poehali.model.{City, Trip}
+import com.github.nikalaikina.poehali.model.{Airport, Trip}
 import com.github.nikalaikina.poehali.to.JsonRoute
 import spray.http.HttpHeaders.RawHeader
 import spray.http.MediaTypes
@@ -41,7 +41,7 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
 
 
   def routes: Route =
-    respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {(
+    respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
       pathPrefix("flights") {
         pathEnd {
           get {
@@ -69,13 +69,13 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
             parameters('number.as[Int]) { (number) =>
               respondWithMediaType(`application/json`) { (ctx: RequestContext) =>
                 (citiesProvider ? GetPlaces(number))
-                  .mapTo[List[City]]
+                  .mapTo[List[Airport]]
                   .map { x => ctx.complete(Json.toJson(x).toString) }
               }
             }
           }
         }
-      })
+      }
     }
 
   def processFlightsRequest: (String, String, String, String, Int, Int, Int, Int) => routing.Route = {

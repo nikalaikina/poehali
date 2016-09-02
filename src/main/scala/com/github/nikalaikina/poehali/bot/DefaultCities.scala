@@ -1,11 +1,11 @@
 package com.github.nikalaikina.poehali.bot
 
 import com.github.nikalaikina.poehali.config.UsedCities
-import com.github.nikalaikina.poehali.model.City
+import com.github.nikalaikina.poehali.model.{Airport, AirportId}
 import com.github.nikalaikina.poehali.util.DistanceCalculator
 import info.mukel.telegrambot4s.models.Location
 
-case class Cities(cities: Map[String, City]) {
+case class DefaultCities(cities: Map[AirportId, Airport]) {
 
   def closest(location: Location, n: Integer, usedOnly: Boolean = false) = {
     cities
@@ -16,14 +16,14 @@ case class Cities(cities: Map[String, City]) {
       .take(5)
   }
 
-  def idByName(name: String): Option[String] = {
+  def idByName(name: String): Option[AirportId] = {
     UsedCities.cities
-      .find(id => cities(id).name == name)
+      .find(id => cities(id).city == name)
   }
 
-  def except(ids: Set[String], usedOnly: Boolean = false) = {
+  def except(cityNames: Set[String], usedOnly: Boolean = false) = {
     cities.values
-      .filter(c => !ids.contains(c.id))
+      .filter(city => cityNames.contains(city.city))
       .filter(c => !usedOnly || UsedCities.cities.contains(c.id))
   }
 }

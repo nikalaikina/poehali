@@ -14,7 +14,7 @@ object MessagePatterns {
   val CityPattern = "(^[A-Z][a-z]+)".r
 }
 
-class PoehaliBot(cities: Cities) extends AbstractActor with AbstractBot  {
+class PoehaliBot(cities: DefaultCities) extends AbstractActor with AbstractBot  {
 
   override val log = super[AbstractActor].log
 
@@ -32,7 +32,7 @@ class PoehaliBot(cities: Cities) extends AbstractActor with AbstractBot  {
       case Some (location) =>
         val buttons = cities
           .closest(location, 5, usedOnly = true)
-          .map(c => new KeyboardButton (c.name))
+          .map(c => KeyboardButton(c.city))
         api.request(SendMessage(chatId = Left(msg.sender),
                                 text = "Choose home city:",
                                 replyMarkup = Option(citiesMarkup(buttons, 3))))
@@ -44,9 +44,7 @@ class PoehaliBot(cities: Cities) extends AbstractActor with AbstractBot  {
         case NumberPattern(n) =>
           getChat() ! GetDetails(n.toInt)
         case CityPattern(cityName) =>
-          cities
-            .idByName(cityName)
-            .foreach(id => getChat() ! AddCity(id))
+          getChat() ! AddCity(cityName)
         case x => super.handleMessage(msg)
       }
       case None =>
@@ -77,7 +75,7 @@ class PoehaliBot(cities: Cities) extends AbstractActor with AbstractBot  {
     case SendCityRequest(id, except) =>
       val buttons: Seq[KeyboardButton] = cities
         .except(except, usedOnly = true)
-        .map(c => KeyboardButton(c.name))
+        .map(c => KeyboardButton(c.city))
         .toSeq
 
       api.request(SendMessage(Left(id), "Choose city:", replyMarkup = Option(citiesMarkup(buttons, 3))))

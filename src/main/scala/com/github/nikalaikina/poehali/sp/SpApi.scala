@@ -7,8 +7,9 @@ import java.time.format.DateTimeFormatter
 import akka.pattern.pipe
 import com.github.nikalaikina.poehali.common.AbstractActor
 import com.github.nikalaikina.poehali.message.{GetFlights, GetPlaces}
-import com.github.nikalaikina.poehali.model.{City, Direction, Flight}
+import com.github.nikalaikina.poehali.model._
 import info.mukel.telegrambot4s.models.Location
+import org.json4s.JsonAST.JValue
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import spray.client.pipelining._
@@ -16,8 +17,13 @@ import spray.http.{HttpRequest, HttpResponse}
 
 import scala.concurrent.Future
 
-private case class SpFlight(flyFrom: String, flyTo: String, price: Float, dTimeUTC: Long, aTimeUTC: Long) {
+private case class SpFlight(flyFrom: String, flyTo: String, price: Float, dTimeUTC: Long, aTimeUTC: Long, route: List[SpRoute]) {
   def date = new Timestamp(dTimeUTC * 1000).toLocalDateTime.toLocalDate
+
+  def toFlight = {
+    val routes = List(route.head.toRoute)
+    Flight(Direction(AirportId(flyFrom), AirportId(flyTo)), price, date: LocalDate, dTimeUTC, aTimeUTC, routes)
+  }
 }
 
 class SpApi extends AbstractActor {
@@ -29,14 +35,14 @@ class SpApi extends AbstractActor {
   val url = "https://api.skypicker.com"
 
   def flights(direction: Direction, dateFrom: LocalDate, dateTo: LocalDate): Future[List[Flight]] = {
-    val urlPattern = s"$url/flights?flyFrom=${direction.from}" +
-                                 s"&to=${direction.to}" +
+    val urlPattern = s"$url/flights?flyFrom=${direction.from.id}" +
+                                 s"&to=${direction.to.id}" +
                                  s"&dateFrom=${formatter.format(dateFrom)}" +
                                  s"&dateTo=${formatter.format(dateTo)}" +
                                  s"&directFlights=1"
     val future: Future[List[Flight]] = get(urlPattern)
       .map(parseFlights)
-      .map(list => list.map(f => new Flight(Direction(f.flyFrom, f.flyTo), f.price, f.date, f.dTimeUTC, f.aTimeUTC)))
+      .map(list => list.map(_.toFlight))
     future
   }
 
@@ -51,12 +57,12 @@ class SpApi extends AbstractActor {
     elements.children.map(_.extract[SpCity])
   }
 
-  def places(): Future[List[City]] = {
+  def places(): Future[List[Airport]] = {
     val urlPattern = s"$url/places"
     get(urlPattern)
       .map(parseCities)
       .map(list => list.filter(c => c.lat.isDefined && c.lng.isDefined)
-        .map(c => new City(c.id, c.value, c.sp_score.getOrElse(0), Location(c.lng.get, c.lat.get)))
+        .map(_.toCity)
         .sortBy(- _.score))
   }
 
@@ -66,11 +72,15 @@ class SpApi extends AbstractActor {
   }
 
   override def receive: Receive = {
-    case GetPlaces =>
-      places() pipeTo sender()
+    case GetPlaces => places() pipeTo sender()
     case GetFlights(direction, dateFrom, dateTo) => flights(direction, dateFrom, dateTo) pipeTo sender()
   }
 }
 
-case class SpCity(id: String, value: String, sp_score: Option[Int], lng: Option[Double], lat: Option[Double])
+case class SpCity(id: String, value: String, sp_score: Option[Int], lng: Option[Double], lat: Option[Double]) {
+  def toCity = Airport(AirportId(id), value, sp_score.getOrElse(0), Location(lng.get, lat.get))
+}
 
+case class SpRoute(flight_no: Long, airline: String) {
+  def toRoute = Route(flight_no, airline)
+}

@@ -1,6 +1,6 @@
 package com.github.nikalaikina.poehali.common
 
-import akka.actor.SupervisorStrategy.Resume
+import akka.actor.SupervisorStrategy.Restart
 import akka.actor.{Actor, ActorLogging, OneForOneStrategy}
 import akka.pattern.AskSupport
 import com.github.nikalaikina.poehali.util.TimeoutImplicits
@@ -17,7 +17,7 @@ trait AbstractActor extends Actor with AskSupport with ActorLogging {
   override val supervisorStrategy =
     OneForOneStrategy() {
       case e: Exception =>
-        log.error(e.toString)
-        Resume
+        e.printStackTrace()
+        Restart
     }
 }

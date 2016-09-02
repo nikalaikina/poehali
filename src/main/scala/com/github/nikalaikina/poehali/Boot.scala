@@ -5,9 +5,9 @@ import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
 import com.github.nikalaikina.poehali.api.RestInterface
-import com.github.nikalaikina.poehali.bot.{Cities, PoehaliBot}
+import com.github.nikalaikina.poehali.bot.{DefaultCities, PoehaliBot}
 import com.github.nikalaikina.poehali.message.GetPlaces
-import com.github.nikalaikina.poehali.model.City
+import com.github.nikalaikina.poehali.model.{Airport, AirportId}
 import com.github.nikalaikina.poehali.sp.{FlightsProvider, PlacesProvider, SpApi}
 import spray.can.Http
 
@@ -46,11 +46,11 @@ object Boot extends App {
 
   def runBot(): Unit = {
     (placesActor ? GetPlaces())
-      .mapTo[List[City]]
+      .mapTo[List[Airport]]
       .onSuccess {
-        case list: List[City] =>
-          val fullMap: Map[String, City] = list.map(c => c.id -> c).toMap
-          system.actorOf(Props(classOf[PoehaliBot], Cities(fullMap)), "bot")
+        case list: List[Airport] =>
+          val fullMap: Map[AirportId, Airport] = list.map(c => c.id -> c).toMap
+          system.actorOf(Props(classOf[PoehaliBot], DefaultCities(fullMap)), "bot")
         case _ => system.log.error("Bot hasn't been started")
       }
   }
