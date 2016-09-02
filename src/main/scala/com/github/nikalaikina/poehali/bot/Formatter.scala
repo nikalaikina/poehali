@@ -1,8 +1,8 @@
 package com.github.nikalaikina.poehali.bot
 
-import com.github.nikalaikina.poehali.model.{Flight, TripRoute}
+import com.github.nikalaikina.poehali.model.{AirportId, Flight, TripRoute}
 
-class Formatter(cities: Cities) {
+class Formatter(cities: DefaultCities) {
 
   def getDetails(person: Long, route: TripRoute): String = {
     route.flights.map(flightFormat).mkString("\n")
@@ -25,7 +25,7 @@ class Formatter(cities: Cities) {
     s"*${route.cost}$$* *|* $citiesString *|* ${route.firstDate} - ${route.curDate}"
   }
 
-  implicit class Imp(val s: String) {
-    implicit def cityName: String = cities.cities(s).name
+  implicit class Imp(val s: AirportId) {
+    implicit def cityName: String = cities.cities(s).city
   }
 }

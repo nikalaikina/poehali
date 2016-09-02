@@ -86,10 +86,10 @@ object ChatFsm {
   case class Collecting(homeCities: Set[String], cities: Set[String]) extends Data
   case class ResultRoutes(homeCities: Set[String], routes: List[TripRoute]) extends Data {
     val best: List[TripRoute] = {
-      val byCitiesCount = routes.groupBy(_.citiesCount(homeCities))
+      val byCitiesCount = routes.groupBy(_.citiesCount)
       byCitiesCount.keys.toList.sortBy(-_).take(3).map(n => {
         byCitiesCount(n)
-          .groupBy(_.cities(homeCities))
+          .groupBy(_.airports) // TODO: group by cities
           .values
           .map(routes => routes.minBy(_.cost))
       }).flatMap(_.toList)
@@ -98,7 +98,7 @@ object ChatFsm {
 }
 
 sealed trait ChatMessage
-case class AddCity(cityId: String) extends ChatMessage
+case class AddCity(cityName: String) extends ChatMessage
 case object Next extends ChatMessage
 case class GetDetails(k: Int) extends ChatMessage
 case class Calculated(resultRoutes: ResultRoutes) extends ChatMessage

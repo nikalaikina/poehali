@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, Props}
 import akka.pattern.pipe
 import com.github.nikalaikina.poehali.common.AbstractActor
 import com.github.nikalaikina.poehali.message.GetPlaces
-import com.github.nikalaikina.poehali.model.City
+import com.github.nikalaikina.poehali.model.Airport
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -22,9 +22,9 @@ class PlacesProvider(spApi: ActorRef)(implicit cache: ScalaCache[InMemoryRepr]) 
       cachedPlaces.map(l => l.take(n)) pipeTo sender()
   }
 
-  def cachedPlaces: Future[List[City]] = {
+  def cachedPlaces: Future[List[Airport]] = {
     sync.cachingWithTTL("places")(24 hours) {
-      (spApi ? GetPlaces).mapTo[List[City]]
+      (spApi ? GetPlaces).mapTo[List[Airport]]
     }
   }
 }
