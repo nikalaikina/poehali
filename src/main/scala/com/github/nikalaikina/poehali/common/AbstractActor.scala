@@ -11,7 +11,7 @@ trait AbstractActor extends Actor with AskSupport with ActorLogging {
   implicit val timeout = TimeoutImplicits.waitForever
 
   implicit val executionContext = ExecutionContext.fromExecutorService(
-    java.util.concurrent.Executors.newCachedThreadPool()
+    java.util.concurrent.Executors.newWorkStealingPool()
   )
 
   override val supervisorStrategy =
