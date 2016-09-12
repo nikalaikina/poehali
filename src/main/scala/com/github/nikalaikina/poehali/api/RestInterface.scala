@@ -1,9 +1,9 @@
 package com.github.nikalaikina.poehali.api
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, Props}
 import akka.pattern.AskSupport
-import com.github.nikalaikina.poehali.logic.TripsCalculator
-import com.github.nikalaikina.poehali.message.{GetPlaces, GetRoutees, Routes}
+import com.github.nikalaikina.poehali.logic.{Cities, TripsCalculator}
+import com.github.nikalaikina.poehali.message.{GetCities, GetPlaces, GetRoutees, Routes}
 import com.github.nikalaikina.poehali.model.{Airport, Trip}
 import com.github.nikalaikina.poehali.to.JsonRoute
 import spray.http.HttpHeaders.RawHeader
@@ -14,13 +14,22 @@ import spray.routing._
 
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
+import scalacache.ScalaCache
+import scalacache.serialization.InMemoryRepr
 
 
-class RestInterface(cp: ActorRef) extends HttpServiceActor with AskSupport with RestApi {
+class RestInterface(val citiesProvider: ActorRef, val spApi: ActorRef)(implicit val citiesCache: ScalaCache[InMemoryRepr])
+  extends HttpServiceActor with AskSupport with RestApi {
+
   implicit val system = context.system
-  override def citiesProvider: ActorRef = cp
 
   def receive = runRoute(routes)
+}
+
+object RestInterface {
+  def props(citiesProvider: ActorRef, spApi: ActorRef)(implicit citiesCache: ScalaCache[InMemoryRepr]) = {
+    Props(new RestInterface(citiesProvider, spApi))
+  }
 }
 
 
@@ -32,13 +41,20 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
 
   implicit val system: ActorSystem
 
-  def citiesProvider: ActorRef
+  implicit val citiesCache: ScalaCache[InMemoryRepr]
+
+  val citiesProvider: ActorRef
+  val spApi: ActorRef
+  var citiesContainer: Cities = _
 
   import MediaTypes._
   import com.github.nikalaikina.poehali.util.JsonImplicits._
   import com.github.nikalaikina.poehali.util.TimeoutImplicits.waitForever
   import play.api.libs.json._
 
+  override def preStart(): Unit = {
+    (citiesProvider ? GetCities).mapTo[Cities].map(c => citiesContainer = c)
+  }
 
   def routes: Route =
     respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
@@ -81,14 +97,16 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
   def processFlightsRequest: (String, String, String, String, Int, Int, Int, Int) => routing.Route = {
     (homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount) => {
       respondWithMediaType(`application/json`) { (ctx: RequestContext) =>
+        val t0 = System.nanoTime()
         val settings = new Trip(homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, cost, citiesCount)
-        (logic ? GetRoutees(settings))
+        (TripsCalculator.logic(spApi, citiesContainer) ? GetRoutees(settings))
           .mapTo[Routes]
           .map(r => r.routes.map(tr => JsonRoute(tr.flights)))
-          .map { x => ctx.complete(Json.toJson(x).toString) }
+          .map { x => {
+            ctx.complete(Json.toJson(x).toString)
+            println("Elapsed time: " + (System.nanoTime() - t0) / (1000 * 1000 * 1000) + "s")
+          } }
       }
     }
   }
-
-  def logic = context.actorOf(Props(classOf[TripsCalculator]))
 }

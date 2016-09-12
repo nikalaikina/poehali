@@ -8,6 +8,7 @@ sealed trait Request
 case class GetRoutees(trip: Trip) extends Request
 case class GetFlights(direction: Direction, dateFrom: LocalDate, dateTo: LocalDate) extends Request
 case class GetPlaces(number: Int = Integer.MAX_VALUE) extends Request
+case object GetCities extends Request
 
 sealed trait Response
 case class Routes(routes: List[TripRoute]) extends Response

@@ -3,7 +3,8 @@ package com.github.nikalaikina.poehali.sp
 import akka.actor.{ActorRef, Props}
 import akka.pattern.pipe
 import com.github.nikalaikina.poehali.common.AbstractActor
-import com.github.nikalaikina.poehali.message.GetPlaces
+import com.github.nikalaikina.poehali.logic.Cities
+import com.github.nikalaikina.poehali.message.{GetCities, GetPlaces}
 import com.github.nikalaikina.poehali.model.Airport
 
 import scala.concurrent.Future
@@ -20,6 +21,8 @@ class PlacesProvider(spApi: ActorRef)(implicit cache: ScalaCache[InMemoryRepr]) 
   override def receive: Receive = {
     case GetPlaces(n) =>
       cachedPlaces.map(l => l.take(n)) pipeTo sender()
+    case GetCities =>
+      cachedPlaces.map(Cities) pipeTo sender()
   }
 
   def cachedPlaces: Future[List[Airport]] = {
