@@ -6,7 +6,7 @@ import com.github.nikalaikina.poehali.logic.{Cities, TripsCalculator}
 import com.github.nikalaikina.poehali.message.{GetCities, GetPlaces, GetRoutees, Routes}
 import com.github.nikalaikina.poehali.model.{Airport, Trip}
 import com.github.nikalaikina.poehali.to.JsonRoute
-import spray.http.HttpHeaders.RawHeader
+import spray.http.HttpHeaders
 import spray.http.MediaTypes
 import spray.routing
 import spray.routing.RejectionHandler.Default
@@ -46,6 +46,15 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
   val citiesProvider: ActorRef
   val spApi: ActorRef
   var citiesContainer: Cities = _
+  val AccessControlAllowAll = HttpHeaders.RawHeader(
+    "Access-Control-Allow-Origin", "*"
+  )
+  val AccessControlAllowHeadersAll = HttpHeaders.RawHeader(
+    "Access-Control-Allow-Headers", "Content-Type,X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5,  Date, X-Api-Version, X-File-Name"
+  )
+  val AccessControlAllowMethods = HttpHeaders.RawHeader(
+    "AccessControlAllowMethods", "POST, GET, PUT, DELETE, OPTIONS"
+    )
 
   import MediaTypes._
   import com.github.nikalaikina.poehali.util.JsonImplicits._
@@ -57,7 +66,7 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
   }
 
   def routes: Route =
-    respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
+    respondWithHeaders(AccessControlAllowAll, AccessControlAllowHeadersAll, AccessControlAllowMethods) {
       pathPrefix("flights") {
         pathEnd {
           get {
