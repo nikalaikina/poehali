@@ -10,6 +10,7 @@ mainClass in assembly := Some("com.github.nikalaikina.poehali.Boot")
 
 assemblyMergeStrategy in assembly := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case x if Assembly.isConfigFile(x) => MergeStrategy.concat
   case x => MergeStrategy.first
 }
 
