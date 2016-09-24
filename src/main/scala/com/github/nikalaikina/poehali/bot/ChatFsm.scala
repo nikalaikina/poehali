@@ -88,10 +88,10 @@ object ChatFsm {
   case class Collecting(homeCities: Set[String], cities: Set[String]) extends Data
   case class ResultRoutes(homeCities: Set[String], routes: List[TripRoute]) extends Data {
     val best: List[TripRoute] = {
-      val byCitiesCount = routes.groupBy(_.citiesCount)
+      val byCitiesCount = routes.groupBy(_.flights.size)
       byCitiesCount.keys.toList.sortBy(-_).take(3).map(n => {
         byCitiesCount(n)
-          .groupBy(_.airports) // TODO: group by cities
+          .groupBy(_.flights.size) // TODO: group by cities
           .values
           .map(routes => routes.minBy(_.cost))
       }).flatMap(_.toList)

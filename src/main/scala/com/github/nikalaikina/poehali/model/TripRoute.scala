@@ -24,23 +24,19 @@ case class Airport(id: AirportId, city: String, score: Int, location: Location)
 
 case class Route(flightNo: Long, airline: String)
 
-class TripRoute(val firstAirport: AirportId, val firstDate: LocalDate) {
+class TripRoute(val firstCity: AirportId, val firstDate: LocalDate) {
   var flights: List[Flight] = List()
 
   def this(node: TripRoute, flight: Flight) {
-    this(node.firstAirport, node.firstDate)
+    this(node.firstCity, node.firstDate)
     flights = node.flights :+ flight
   }
 
   def days = if (flights.isEmpty) 0L else DAYS.between(firstDate, flights.last.date)
 
-  def citiesCount = flights.map(_.direction.to).distinct.size
-
-  def airports = flights.map(_.direction.to).distinct.toSet
-
   def cost = flights.map(_.price).sum
 
-  def curAirport = if (flights.isEmpty) firstAirport else flights.last.direction.to
+  def curAirport = if (flights.isEmpty) firstCity else flights.last.direction.to
 
   def curDate = if (flights.isEmpty) firstDate else flights.last.date
 
