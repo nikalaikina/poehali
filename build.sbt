@@ -4,9 +4,14 @@ version := "1.0"
 
 scalaVersion := "2.11.8"
 
-assemblyJarName in assembly := "dreamvoyage.jar"
+assemblyJarName in assembly := "poehali.jar"
 
-mainClass in assembly := Some("com.github.nikalaikina.WebAppMain")
+mainClass in assembly := Some("com.github.nikalaikina.poehali.Boot")
+
+assemblyMergeStrategy in assembly := {
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case x => MergeStrategy.first
+}
 
 resolvers += "jitpack" at "https://jitpack.io"
 
