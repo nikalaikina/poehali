@@ -27,6 +27,7 @@ case class TripsCalculator(spApi: ActorRef, cities: Cities)(implicit val citiesC
 
   var citiesCount = 1
   var cost = 2000f
+  var precision = 1
 
   private def isFine(route: TripRoute): Boolean = {
     (route.flights.size > 1
@@ -78,7 +79,7 @@ case class TripsCalculator(spApi: ActorRef, cities: Cities)(implicit val citiesC
     if (count.decrementAndGet() == 0) {
       log.debug(s"Found ${routes.size} routes")
       val result = routes
-        .filter(r => r.flights.size == citiesCount && r.cost <= cost * 1.5)
+        .filter(r => r.flights.size == citiesCount)
         .sortBy(_.cost)
         .toList
       sender_ ! Routes(result)
@@ -96,7 +97,7 @@ case class TripsCalculator(spApi: ActorRef, cities: Cities)(implicit val citiesC
     val toIds = cities.byName(cityName).map(_.id)
     Future.sequence(for (from <- fromIds; to <- toIds) yield getAirportFlights(from, to))
       .map(_.flatten)
-      .map(_.groupBy(_.date).toList.map(t => t._2.minBy(_.price)).filter(_.price < cost / (citiesCount / 2)))
+      .map(_.groupBy(_.date).toList.map(t => t._2.minBy(_.price)).sortBy(_.price).take(precision))
   }
 
   def getFirstDays: IndexedSeq[LocalDate] = {
@@ -109,6 +110,9 @@ case class TripsCalculator(spApi: ActorRef, cities: Cities)(implicit val citiesC
   override def receive: Receive = {
     case GetRoutees(tripSettings) =>
       trip = tripSettings
+      if (trip.cities.size < 4) {
+        precision = 7 - trip.cities.size
+      }
       sender_ = sender()
       val homeAirports = trip.homeCities.flatMap(city => cities.byName(city)).map(_.id)
       for (city <- homeAirports; day <- getFirstDays) {
