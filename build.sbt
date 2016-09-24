@@ -8,6 +8,11 @@ assemblyJarName in assembly := "dreamvoyage.jar"
 
 mainClass in assembly := Some("com.github.nikalaikina.WebAppMain")
 
+assemblyMergeStrategy in assembly := {
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case x => MergeStrategy.first
+}
+
 resolvers += "jitpack" at "https://jitpack.io"
 
 libraryDependencies ++= {
@@ -35,6 +40,8 @@ libraryDependencies ++= {
 
     "com.github.cb372" %% "scalacache-core" % scalacacheVersion,
     "com.github.cb372" %% "scalacache-guava" % scalacacheVersion,
+    "org.terracotta.bigmemory" % "bigmemory" % "4.0.5",
+    "net.sf.ehcache" % "ehcache-ee" % "2.7.5",
 
     "ch.qos.logback" % "logback-classic" % "1.1.2",
     "org.specs2" %% "specs2" % "2.3.13" % "test"
