@@ -18,7 +18,7 @@ import scala.util.Success
 import scalacache.ScalaCache
 import scalacache.serialization.InMemoryRepr
 
-case class TripsCalculator(spApi: ActorRef, cities: Cities)(implicit val citiesCache: ScalaCache[InMemoryRepr]) extends AbstractActor with FlightsProvider {
+case class TripsCalculator(spApi: ActorRef, cities: Cities)(implicit val citiesCache: ScalaCache[Array[Byte]]) extends AbstractActor with FlightsProvider {
 
   var trip: Trip = _
   var sender_ = Actor.noSender
@@ -56,22 +56,12 @@ case class TripsCalculator(spApi: ActorRef, cities: Cities)(implicit val citiesC
           .map(airport => cities.airports(airport).city)
       val curCity = cities.airports(current.curAirport).city
       for (city <- trip.cities; if curCity != city && !visited.contains(city)) {
-        count.incrementAndGet()
-        getFlights(current, city)
-          .onComplete {
-            case Success(List()) =>
-              nodeProcessed()
-            case Success(flights) =>
-              println(s"~~  ${flights.size}")
-              flights.foreach(flight => processNode(new TripRoute(current, flight)))
-              nodeProcessed()
-            case x => throw new RuntimeException(x.toString)
-          }
+        getFlights(current, city).foreach(flight => processNode(new TripRoute(current, flight)))
       }
     }
   }
 
-  def nodeProcessed() = {
+/*  def nodeProcessed() = {
     println(count.get())
     if (count.get() < 0) {
       throw new RuntimeException("Count cannot be less than zero")
@@ -85,19 +75,19 @@ case class TripsCalculator(spApi: ActorRef, cities: Cities)(implicit val citiesC
       sender_ ! Routes(result)
       context.stop(self)
     }
-  }
+  }*/
 
-  private def getFlights(route: TripRoute, cityName: String): Future[List[Flight]] = {
+  private def getFlights(route: TripRoute, cityName: String): List[Flight] = {
 
-    def getAirportFlights(from: AirportId, to: AirportId): Future[List[Flight]] = {
+    def getAirportFlights(from: AirportId, to: AirportId): List[Flight] = {
       getFlights(Direction(from, to), route.curDate.plusDays(2), route.curDate.plusDays(8))
     }
 
     val fromIds = cities.byAirport(route.curAirport).map(_.id)
     val toIds = cities.byName(cityName).map(_.id)
-    Future.sequence(for (from <- fromIds; to <- toIds) yield getAirportFlights(from, to))
-      .map(_.flatten)
-      .map(_.groupBy(_.date).toList.map(t => t._2.minBy(_.price)).sortBy(_.price).take(precision))
+    (for (from <- fromIds; to <- toIds) yield getAirportFlights(from, to))
+      .flatten
+      .groupBy(_.date).toList.map(t => t._2.minBy(_.price)).sortBy(_.price).take(precision)
   }
 
   def getFirstDays: IndexedSeq[LocalDate] = {
@@ -118,11 +108,17 @@ case class TripsCalculator(spApi: ActorRef, cities: Cities)(implicit val citiesC
       for (city <- homeAirports; day <- getFirstDays) {
         processNode(new TripRoute(city, day))
       }
+      val result = routes
+        .filter(r => r.flights.size == citiesCount)
+        .sortBy(_.cost)
+        .toList
+      sender_ ! Routes(result)
+      context.stop(self)
   }
 }
 
 object TripsCalculator {
-  def logic(spApi: ActorRef, cities: Cities)(implicit citiesCache: ScalaCache[InMemoryRepr], context: ActorContext) = {
+  def logic(spApi: ActorRef, cities: Cities)(implicit citiesCache: ScalaCache[Array[Byte]], context: ActorContext) = {
     context.actorOf(Props(new TripsCalculator(spApi, cities)))
   }
 }

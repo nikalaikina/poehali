@@ -18,7 +18,7 @@ import scalacache.ScalaCache
 import scalacache.serialization.InMemoryRepr
 
 
-class RestInterface(val citiesProvider: ActorRef, val spApi: ActorRef)(implicit val citiesCache: ScalaCache[InMemoryRepr])
+class RestInterface(val citiesProvider: ActorRef, val spApi: ActorRef)(implicit val citiesCache: ScalaCache[Array[Byte]])
   extends HttpServiceActor with AskSupport with RestApi {
 
   implicit val system = context.system
@@ -27,7 +27,7 @@ class RestInterface(val citiesProvider: ActorRef, val spApi: ActorRef)(implicit 
 }
 
 object RestInterface {
-  def props(citiesProvider: ActorRef, spApi: ActorRef)(implicit citiesCache: ScalaCache[InMemoryRepr]) = {
+  def props(citiesProvider: ActorRef, spApi: ActorRef)(implicit citiesCache: ScalaCache[Array[Byte]]) = {
     Props(new RestInterface(citiesProvider, spApi))
   }
 }
@@ -41,7 +41,7 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
 
   implicit val system: ActorSystem
 
-  implicit val citiesCache: ScalaCache[InMemoryRepr]
+  implicit val citiesCache: ScalaCache[Array[Byte]]
 
   val citiesProvider: ActorRef
   val spApi: ActorRef

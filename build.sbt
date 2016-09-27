@@ -41,6 +41,8 @@ libraryDependencies ++= {
 
     "com.github.cb372" %% "scalacache-core" % scalacacheVersion,
     "com.github.cb372" %% "scalacache-guava" % scalacacheVersion,
+    "redis.clients" % "jedis" % "2.9.0",
+    "com.github.cb372" %% "scalacache-redis" % "0.9.2",
 
     "ch.qos.logback" % "logback-classic" % "1.1.2",
     "org.specs2" %% "specs2" % "2.3.13" % "test"
