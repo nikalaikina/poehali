@@ -8,20 +8,29 @@ import com.github.nikalaikina.poehali.bot.{DefaultCities, PoehaliBot}
 import com.github.nikalaikina.poehali.message.GetPlaces
 import com.github.nikalaikina.poehali.model.{Airport, AirportId}
 import com.github.nikalaikina.poehali.sp.{PlacesProvider, SpApi}
+import redis.clients.jedis.{Jedis, JedisPool}
 import spray.can.Http
 
 import scalacache.ScalaCache
 import scalacache.guava.GuavaCache
+import scalacache.redis.RedisCache
+import scalacache.serialization.InMemoryRepr
 
 object Boot extends App {
   val host = "0.0.0.0"
   val port = 8888
 
   import com.github.nikalaikina.poehali.util.TimeoutImplicits.waitForever
+  import scalacache.serialization.GZippingJavaAnyBinaryCodec.default
 
   implicit val system = ActorSystem("routes-service")
   implicit val executionContext = system.dispatcher
-  implicit val citiesCache = ScalaCache(GuavaCache())
+
+//    implicit val citiesCache: ScalaCache[InMemoryRepr] = ScalaCache(GuavaCache())
+  //  implicit val scalaCache: ScalaCache[Repr] = ScalaCache(RedisCache("localhost", 6379))
+  val jedis = new JedisPool()
+  private val cache = new RedisCache(jedisPool = jedis, useLegacySerialization = true)
+  implicit val scalaCache: ScalaCache[Array[Byte]] = ScalaCache(cache)
 
   val spApi: ActorRef = system.actorOf(Props(classOf[SpApi]), "spApi")
   val placesActor: ActorRef = system.actorOf(PlacesProvider.props(spApi), "placesProvider")

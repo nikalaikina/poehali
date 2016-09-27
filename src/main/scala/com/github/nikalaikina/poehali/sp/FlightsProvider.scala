@@ -1,5 +1,6 @@
 package com.github.nikalaikina.poehali.sp
 
+import java.lang.Class
 import java.time.LocalDate
 
 import akka.actor.{Actor, ActorRef}
@@ -8,31 +9,41 @@ import com.github.nikalaikina.poehali.common.AbstractActor
 import com.github.nikalaikina.poehali.message.GetFlights
 import com.github.nikalaikina.poehali.model.{Direction, Flight}
 
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scalacache.serialization.InMemoryRepr
+import scalacache.serialization.{Codec, GZippingBinaryCodec, InMemoryRepr}
 import scalacache.{ScalaCache, sync}
+import scala.reflect._
+import scala.util.{Failure, Success}
 
 
 trait FlightsProvider { actor: AbstractActor with AskSupport =>
 
-  implicit val citiesCache: ScalaCache[InMemoryRepr]
+  import scalacache._
+  implicit val flags = Flags.defaultFlags
+  implicit val cc: GZippingBinaryCodec[List[Flight]] = scalacache.serialization.GZippingJavaAnyBinaryCodec.default[List[Flight]]
+
+  implicit val citiesCache: ScalaCache[Array[Byte]]
   val spApi: ActorRef
 
-  def getFlights(direction: Direction, dateFrom: LocalDate, dateTo: LocalDate): Future[List[Flight]] = {
-    getFlightsCached(direction)
-        .map(list => list.filter(f => !f.date.isBefore(dateFrom) && !f.date.isAfter(dateTo)))
+  def getFlights(direction: Direction, dateFrom: LocalDate, dateTo: LocalDate): List[Flight] = {
+    getFlightsCached(direction).filter(f => !f.date.isBefore(dateFrom) && !f.date.isAfter(dateTo))
   }
 
-  def getFlightsCached(direction: Direction): Future[List[Flight]] =
+  def getFlightsCached(direction: Direction): List[Flight] =
     sync.cachingWithTTL(direction)(24 hours) {
       val dateFrom = LocalDate.now()
       val dateTo = dateFrom.plusYears(1)
-      (spApi ? GetFlights(direction, dateFrom, dateTo))
+      val f = (spApi ? GetFlights(direction, dateFrom, dateTo))
         .mapTo[List[Flight]]
+      val result = Await.ready(f, Duration.Inf).value.get
+
+      result match {
+        case Success(t) => t
+        case Failure(e) => List()
+      }
     }
 
   override def receive: Receive = ???
 }
-
