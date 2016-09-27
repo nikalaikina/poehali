@@ -111,6 +111,7 @@ case class TripsCalculator(spApi: ActorRef, cities: Cities)(implicit val citiesC
       val result = routes
         .filter(r => r.flights.size == citiesCount)
         .sortBy(_.cost)
+        .take(100)
         .toList
       sender_ ! Routes(result)
       context.stop(self)
