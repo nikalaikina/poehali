@@ -34,9 +34,9 @@ class SpApi extends AbstractActor {
 
   val url = "https://api.skypicker.com"
 
-  def flights(direction: Direction, dateFrom: LocalDate, dateTo: LocalDate): Future[List[Flight]] = {
-    val urlPattern = s"$url/flights?flyFrom=${direction.from.id}" +
-                                 s"&to=${direction.to.id}" +
+  def flights(direction: CityDirection, dateFrom: LocalDate, dateTo: LocalDate): Future[List[Flight]] = {
+    val urlPattern = s"$url/flights?flyFrom=${direction.from}" +
+                                 s"&to=${direction.to}" +
                                  s"&dateFrom=${formatter.format(dateFrom)}" +
                                  s"&dateTo=${formatter.format(dateTo)}" +
                                  s"&directFlights=1"

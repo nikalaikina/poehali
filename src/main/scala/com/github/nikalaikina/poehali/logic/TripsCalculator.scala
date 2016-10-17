@@ -39,18 +39,8 @@ case class TripsCalculator(spApi: ActorRef, cities: Cities)(implicit val citiesC
 
   private def processNode(current: TripRoute): Unit = {
     if (isFine(current)) {
-      log.debug(s"Added route $current")
-      routes.synchronized { routes += current }
-      if (current.flights.size > citiesCount) {
-        citiesCount = current.flights.size
-        if (current.cost > cost) {
-          cost = current.cost
-        }
-      }
-      if (current.flights.size == citiesCount && current.cost < cost) {
-        cost = current.cost
-      }
-    } else if (current.days < trip.daysTo && current.cost <= cost * 1.5 * current.flights.size / citiesCount) {
+      addRoute(current)
+    } else if (current.days < trip.daysTo && current.cost <= cost * 2 * current.flights.size / citiesCount) {
       val visited = current.flights.map(_.direction.to)
           .distinct
           .map(airport => cities.airports(airport).city)
@@ -61,32 +51,24 @@ case class TripsCalculator(spApi: ActorRef, cities: Cities)(implicit val citiesC
     }
   }
 
-/*  def nodeProcessed() = {
-    println(count.get())
-    if (count.get() < 0) {
-      throw new RuntimeException("Count cannot be less than zero")
+  def addRoute(current: TripRoute): Unit = {
+    log.debug(s"Added route $current")
+    routes.synchronized {
+      routes += current
     }
-    if (count.decrementAndGet() == 0) {
-      log.debug(s"Found ${routes.size} routes")
-      val result = routes
-        .filter(r => r.flights.size == citiesCount)
-        .sortBy(_.cost)
-        .toList
-      sender_ ! Routes(result)
-      context.stop(self)
+    if (current.flights.size > citiesCount) {
+      citiesCount = current.flights.size
+      if (current.cost > cost) {
+        cost = current.cost
+      }
     }
-  }*/
+    if (current.flights.size == citiesCount && current.cost < cost) {
+      cost = current.cost
+    }
+  }
 
   private def getFlights(route: TripRoute, cityName: String): List[Flight] = {
-
-    def getAirportFlights(from: AirportId, to: AirportId): List[Flight] = {
-      getFlights(Direction(from, to), route.curDate.plusDays(2), route.curDate.plusDays(8))
-    }
-
-    val fromIds = cities.byAirport(route.curAirport).map(_.id)
-    val toIds = cities.byName(cityName).map(_.id)
-    (for (from <- fromIds; to <- toIds) yield getAirportFlights(from, to))
-      .flatten
+    getFlights(CityDirection(cities.airports(route.curAirport).city, cityName), route.curDate.plusDays(2), route.curDate.plusDays(8))
       .groupBy(_.date).toList.map(t => t._2.minBy(_.price)).sortBy(_.price).take(precision)
   }
 
@@ -101,7 +83,7 @@ case class TripsCalculator(spApi: ActorRef, cities: Cities)(implicit val citiesC
     case GetRoutees(tripSettings) =>
       trip = tripSettings
       if (trip.cities.size < 4) {
-        precision = 7 - trip.cities.size
+        precision = Math.min(5 - trip.cities.size, 1)
       }
       sender_ = sender()
       val homeAirports = trip.homeCities.flatMap(city => cities.byName(city)).map(_.id)
@@ -111,7 +93,7 @@ case class TripsCalculator(spApi: ActorRef, cities: Cities)(implicit val citiesC
       val result = routes
         .filter(r => r.flights.size == citiesCount)
         .sortBy(_.cost)
-        .take(100)
+        .take(30)
         .toList
       sender_ ! Routes(result)
       context.stop(self)
