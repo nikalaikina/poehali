@@ -15,7 +15,7 @@ case class Direction(from: AirportId, to: AirportId)
 
 case class CityDirection(from: String, to: String)
 
-case class Flight(direction: Direction, price: Float, date: LocalDate, timeFrom: Long, timeTo: Long, routes: List[Route]) {
+case class Flight(direction: Direction, price: Float, date: LocalDate, timeFrom: Long, timeTo: Long, routes: List[Route], url: String) {
   override def equals(o: scala.Any): Boolean = o match {
     case that: Flight => direction.equals(that.direction) && price.equals(that.price) && date.equals(that.date)
     case _ => false
