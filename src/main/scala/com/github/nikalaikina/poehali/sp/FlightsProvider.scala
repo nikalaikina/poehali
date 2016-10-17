@@ -7,7 +7,7 @@ import akka.actor.{Actor, ActorRef}
 import akka.pattern.AskSupport
 import com.github.nikalaikina.poehali.common.AbstractActor
 import com.github.nikalaikina.poehali.message.GetFlights
-import com.github.nikalaikina.poehali.model.{Direction, Flight}
+import com.github.nikalaikina.poehali.model.{CityDirection, Flight}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -27,11 +27,11 @@ trait FlightsProvider { actor: AbstractActor with AskSupport =>
   implicit val citiesCache: ScalaCache[Array[Byte]]
   val spApi: ActorRef
 
-  def getFlights(direction: Direction, dateFrom: LocalDate, dateTo: LocalDate): List[Flight] = {
+  def getFlights(direction: CityDirection, dateFrom: LocalDate, dateTo: LocalDate): List[Flight] = {
     getFlightsCached(direction).filter(f => !f.date.isBefore(dateFrom) && !f.date.isAfter(dateTo))
   }
 
-  def getFlightsCached(direction: Direction): List[Flight] =
+  def getFlightsCached(direction: CityDirection): List[Flight] =
     sync.cachingWithTTL(direction)(24 hours) {
       val dateFrom = LocalDate.now()
       val dateTo = dateFrom.plusYears(1)
