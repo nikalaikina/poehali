@@ -41,7 +41,7 @@ object Boot extends App {
       case list: List[Airport] =>
         val cities = Cities(list)
 
-        val socketServer = SocketServer("localhost", 4242, NoLogging, spApi, cities)
+        val socketServer = SocketServer("localhost", 4242, system.log, spApi, cities)
         socketServer.start()
 
         val fullMap: Map[AirportId, Airport] = list.map(c => c.id -> c).toMap

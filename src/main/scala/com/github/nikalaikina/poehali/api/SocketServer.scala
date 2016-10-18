@@ -4,7 +4,7 @@ package com.github.nikalaikina.poehali.api
 
 import java.net.InetSocketAddress
 
-import akka.actor.{Actor, ActorRef}
+import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem}
 import akka.event.LoggingAdapter
 import com.github.nikalaikina.poehali.common.AbstractActor
 import com.github.nikalaikina.poehali.logic.{Cities, WsCalculator}
@@ -21,10 +21,10 @@ case class SocketServer(host: String,
                         port: Int,
                         log: LoggingAdapter,
                         spApi: ActorRef,
-                        cities: Cities)(implicit val citiesCache: ScalaCache[Array[Byte]]) extends
+                        cities: Cities)(implicit val citiesCache: ScalaCache[Array[Byte]], context: ActorSystem) extends
   WebSocketServer(new InetSocketAddress(host, port)) {
 
-  var map: Map[WebSocket, WsCalculator] = Map()
+  var map: Map[WebSocket, ActorRef] = Map()
 
   import com.github.nikalaikina.poehali.util.JsonImplicits._
 
@@ -41,7 +41,7 @@ case class SocketServer(host: String,
     log.info(s"message given: $message")
     Json.fromJson[Trip](Json.parse(message)) match {
       case JsSuccess(value, path) =>
-        map += webSocket -> WsCalculator(spApi, webSocket, cities, value)
+        map += webSocket -> WsCalculator.start(spApi, webSocket, cities, value)
       case x =>
         println(x)
     }

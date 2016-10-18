@@ -85,3 +85,10 @@ case class WsCalculator(spApi: ActorRef, socket: WebSocket, cities: Cities, trip
     }
   }
 }
+
+object WsCalculator {
+  def start(spApi: ActorRef, socket: WebSocket, cities: Cities, trip: Trip)
+           (implicit citiesCache: ScalaCache[Array[Byte]], context: ActorSystem) = {
+    context.actorOf(Props(WsCalculator(spApi, socket, cities, trip)))
+  }
+}
