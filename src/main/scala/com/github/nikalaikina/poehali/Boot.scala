@@ -1,10 +1,12 @@
 package com.github.nikalaikina.poehali
 
 import akka.actor._
+import akka.event.NoLogging
 import akka.io.IO
 import akka.pattern.ask
-import com.github.nikalaikina.poehali.api.RestInterface
+import com.github.nikalaikina.poehali.api.{RestInterface, SocketServer}
 import com.github.nikalaikina.poehali.bot.{DefaultCities, PoehaliBot}
+import com.github.nikalaikina.poehali.logic.Cities
 import com.github.nikalaikina.poehali.message.GetPlaces
 import com.github.nikalaikina.poehali.model.{Airport, AirportId}
 import com.github.nikalaikina.poehali.sp.{PlacesProvider, SpApi}
@@ -26,8 +28,6 @@ object Boot extends App {
   implicit val system = ActorSystem("routes-service")
   implicit val executionContext = system.dispatcher
 
-//    implicit val citiesCache: ScalaCache[InMemoryRepr] = ScalaCache(GuavaCache())
-  //  implicit val scalaCache: ScalaCache[Repr] = ScalaCache(RedisCache("localhost", 6379))
   val jedis = new JedisPool()
   private val cache = new RedisCache(jedisPool = jedis, useLegacySerialization = true)
   implicit val scalaCache: ScalaCache[Array[Byte]] = ScalaCache(cache)
@@ -39,6 +39,11 @@ object Boot extends App {
     .mapTo[List[Airport]]
     .onSuccess {
       case list: List[Airport] =>
+        val cities = Cities(list)
+
+        val socketServer = SocketServer("localhost", 4242, NoLogging, spApi, cities)
+        socketServer.start()
+
         val fullMap: Map[AirportId, Airport] = list.map(c => c.id -> c).toMap
         system.actorOf(Props(classOf[PoehaliBot], DefaultCities(fullMap)), "bot")
 

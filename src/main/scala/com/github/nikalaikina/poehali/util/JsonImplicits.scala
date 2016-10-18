@@ -15,5 +15,6 @@ object JsonImplicits {
   implicit val jsonRouteFormat = Json.format[JsonRoute]
   implicit val locationFormat = Json.format[Location]
   implicit val cityFormat = Json.format[Airport]
+  implicit val tripFormat = Json.format[Trip]
 
 }
