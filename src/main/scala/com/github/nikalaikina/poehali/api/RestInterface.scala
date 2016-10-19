@@ -1,8 +1,11 @@
 package com.github.nikalaikina.poehali.api
 
+import java.time.{DayOfWeek, Period}
+
 import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, Props}
 import akka.pattern.AskSupport
-import com.github.nikalaikina.poehali.logic.{Cities, TripsCalculator}
+import com.github.nikalaikina.poehali.logic.ManualCacheHeater.Heat
+import com.github.nikalaikina.poehali.logic.{Cities, ManualCacheHeater, TripsCalculator}
 import com.github.nikalaikina.poehali.message.{GetCities, GetPlaces, GetRoutees, Routes}
 import com.github.nikalaikina.poehali.model.{Airport, Trip}
 import com.github.nikalaikina.poehali.to.JsonRoute
@@ -45,7 +48,9 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
 
   val citiesProvider: ActorRef
   val spApi: ActorRef
+  val cacheHeater = ManualCacheHeater.start(spApi)
   var citiesContainer: Cities = _
+
   val AccessControlAllowAll = HttpHeaders.RawHeader(
     "Access-Control-Allow-Origin", "*"
   )
@@ -77,6 +82,17 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
           post {
             formField('homeCities, 'cities, 'dateFrom, 'dateTo, 'daysFrom.as[Int], 'daysTo.as[Int]) {
               processFlightsRequest
+            }
+          }
+        }
+      } ~
+      pathPrefix("cacheHeating") {
+        parameters('cities.as[String]) { cities =>
+          pathEnd {
+            get {
+              val list = cities.split(",").toList
+              cacheHeater ! Heat(list, Period.ofMonths(6))
+              complete("started")
             }
           }
         }
