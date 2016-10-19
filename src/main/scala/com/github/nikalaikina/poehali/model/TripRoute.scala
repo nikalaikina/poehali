@@ -15,9 +15,9 @@ case class Direction(from: AirportId, to: AirportId)
 
 case class CityDirection(from: String, to: String)
 
-case class Flight(direction: Direction, price: Float, date: LocalDate, timeFrom: Long, timeTo: Long, routes: List[Route], url: String) {
+case class Flight(airports: Direction, direction: CityDirection, price: Float, date: LocalDate, timeFrom: Long, timeTo: Long, routes: List[Route], url: String) {
   override def equals(o: scala.Any): Boolean = o match {
-    case that: Flight => direction.equals(that.direction) && price.equals(that.price) && date.equals(that.date)
+    case that: Flight => airports.equals(that.airports) && price.equals(that.price) && date.equals(that.date)
     case _ => false
   }
 }
@@ -26,7 +26,7 @@ case class Airport(id: AirportId, city: String, score: Int, location: Location)
 
 case class Route(flightNo: Long, airline: String)
 
-class TripRoute(val firstCity: AirportId, val firstDate: LocalDate) {
+class TripRoute(val firstCity: String, val firstDate: LocalDate) {
   var flights: List[Flight] = List()
 
   def this(node: TripRoute, flight: Flight) {
@@ -38,7 +38,7 @@ class TripRoute(val firstCity: AirportId, val firstDate: LocalDate) {
 
   def cost = flights.map(_.price).sum
 
-  def curAirport = if (flights.isEmpty) firstCity else flights.last.direction.to
+  def curCity = if (flights.isEmpty) firstCity else flights.last.direction.to
 
   def curDate = if (flights.isEmpty) firstDate else flights.last.date
 

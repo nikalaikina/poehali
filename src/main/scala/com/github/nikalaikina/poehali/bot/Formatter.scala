@@ -15,12 +15,12 @@ class Formatter(cities: DefaultCities) {
   }
 
   def flightFormat(flight: Flight): String = {
-    s"`${flight.direction.from.cityName} -> ${flight.direction.to.cityName}\t${flight.date}\t${flight.price}`"
+    s"`${flight.airports.from.cityName} -> ${flight.airports.to.cityName}\t${flight.date}\t${flight.price}`"
   }
 
   def tripFormat(route: TripRoute): String = {
-    val firstCity: String = route.flights.head.direction.from.cityName
-    val citiesString = (firstCity :: route.flights.map(f => f.direction.to.cityName)).mkString(" -> ")
+    val firstCity: String = route.flights.head.airports.from.cityName
+    val citiesString = (firstCity :: route.flights.map(f => f.airports.to.cityName)).mkString(" -> ")
 
     s"*${route.cost}$$* *|* $citiesString *|* ${route.firstDate} - ${route.curDate}"
   }

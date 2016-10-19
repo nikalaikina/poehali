@@ -41,7 +41,7 @@ case class SocketServer(host: String,
     log.info(s"message given: $message")
     Json.fromJson[Trip](Json.parse(message)) match {
       case JsSuccess(value, path) =>
-        map += webSocket -> WsCalculator.start(spApi, webSocket, cities, value)
+        map += webSocket -> WsCalculator.start(spApi, webSocket, value)
       case x =>
         println(x)
     }
