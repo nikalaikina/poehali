@@ -16,29 +16,14 @@ case class WsCalculator(spApi: ActorRef, socket: WebSocket, trip: Trip)(implicit
 
   import com.github.nikalaikina.poehali.util.JsonImplicits._
 
-  val precision = Math.min(5 - trip.cities.size, 1)
-  var citiesCount = 1
-  var cost = 2000f
-
-  for (city <- trip.homeCities; day <- getFirstDays) {
-    processNode(new TripRoute(city, day))
-  }
-
+  calc()
   socket.close()
   context.stop(self)
 
   def addRoute(current: TripRoute): Unit = {
     log.debug(s"Added route $current")
     socket.send(Json.toJson(JsonRoute(current.flights)).toString())
-    if (current.flights.size > citiesCount) {
-      citiesCount = current.flights.size
-      if (current.cost > cost) {
-        cost = current.cost
-      }
-    }
-    if (current.flights.size == citiesCount && current.cost < cost) {
-      cost = current.cost
-    }
+    updateState(current)
   }
 }
 

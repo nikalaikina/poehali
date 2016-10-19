@@ -20,9 +20,8 @@ import scalacache.ScalaCache
 case class SocketServer(host: String,
                         port: Int,
                         log: LoggingAdapter,
-                        spApi: ActorRef,
-                        cities: Cities)(implicit val citiesCache: ScalaCache[Array[Byte]], context: ActorSystem) extends
-  WebSocketServer(new InetSocketAddress(host, port)) {
+                        spApi: ActorRef)(implicit val citiesCache: ScalaCache[Array[Byte]], context: ActorSystem)
+  extends WebSocketServer(new InetSocketAddress(host, port)) {
 
   var map: Map[WebSocket, ActorRef] = Map()
 
