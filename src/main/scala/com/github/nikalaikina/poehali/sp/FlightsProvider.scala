@@ -45,5 +45,8 @@ trait FlightsProvider { actor: AbstractActor with AskSupport =>
       }
     }
 
-  override def receive: Receive = ???
+  override def receive: Receive = {
+    case x =>
+      log.error(s"Received a message: $x")
+  }
 }

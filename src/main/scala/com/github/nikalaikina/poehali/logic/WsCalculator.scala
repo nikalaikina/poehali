@@ -36,6 +36,7 @@ case class WsCalculator(spApi: ActorRef, socket: WebSocket, cities: Cities, trip
   }
 
   socket.close()
+  context.stop(self)
 
   private def isFine(route: TripRoute): Boolean = {
     (route.flights.size > 1
@@ -53,7 +54,7 @@ case class WsCalculator(spApi: ActorRef, socket: WebSocket, cities: Cities, trip
         .distinct
         .map(airport => cities.airports(airport).city)
       val curCity = cities.airports(current.curAirport).city
-      for (city <- trip.cities; if curCity != city && !visited.contains(city)) {
+      for (city <- trip.allCities; if curCity != city && !visited.contains(city)) {
         getFlights(current, city).foreach(flight => processNode(new TripRoute(current, flight)))
       }
     }

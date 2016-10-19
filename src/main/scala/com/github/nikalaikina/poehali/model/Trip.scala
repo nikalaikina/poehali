@@ -36,6 +36,8 @@ case class Trip(homeCities: Set[String],
           daysFrom = config.getInt("daysFrom"),
           daysTo = config.getInt("daysTo"))
   }
+
+  val allCities = homeCities ++ cities
 }
 
 object Trip{
