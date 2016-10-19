@@ -123,8 +123,8 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
     (homeCities, cities, dateFrom, dateTo, daysFrom, daysTo) => {
       respondWithMediaType(`application/json`) { (ctx: RequestContext) =>
         val t0 = System.nanoTime()
-        val settings = new Trip(homeCities, cities, dateFrom, dateTo, daysFrom, daysTo)
-        (TripsCalculator.logic(spApi, citiesContainer) ? GetRoutees(settings))
+        val trip = new Trip(homeCities, cities, dateFrom, dateTo, daysFrom, daysTo)
+        (TripsCalculator.logic(spApi, trip) ? GetRoutees(trip))
           .mapTo[Routes]
           .map(r => r.routes.map(tr => JsonRoute(tr.flights)))
           .map { x => {

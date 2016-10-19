@@ -13,11 +13,30 @@ trait Calculations { this: FlightsProvider =>
 
   def trip: Trip
 
-  def precision: Int
+  val precision: Int = Math.min(5 - trip.cities.size, 1)
 
-  def cost: Float
+  var cost: Float = 1000f
 
-  def citiesCount: Int
+  var citiesCount: Int = 1
+
+
+  def calc(): Unit = {
+    for (city <- trip.homeCities; day <- getFirstDays) {
+      processNode(new TripRoute(city, day))
+    }
+  }
+
+  def updateState(current: TripRoute): Unit = {
+    if (current.flights.size > citiesCount) {
+      citiesCount = current.flights.size
+      if (current.cost > cost) {
+        cost = current.cost
+      }
+    }
+    if (current.flights.size == citiesCount && current.cost < cost) {
+      cost = current.cost
+    }
+  }
 
   private def isFine(route: TripRoute): Boolean = {
     (route.flights.size > 1
