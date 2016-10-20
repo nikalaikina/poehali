@@ -40,7 +40,6 @@ trait Calculations { this: FlightsProvider =>
 
   private def isFine(route: TripRoute): Boolean = {
     (route.flights.size > 1
-      && route.cost <= cost * 2
       && trip.homeCities.contains(route.curCity)
       && route.days >= trip.daysFrom
       && route.days <= trip.daysTo)
@@ -49,9 +48,9 @@ trait Calculations { this: FlightsProvider =>
   def processNode(current: TripRoute): Unit = {
     if (isFine(current)) {
       addRoute(current)
-    } else if (current.days < trip.daysTo && current.cost <= cost * 2 * current.flights.size / citiesCount) {
-      val visited = current.flights.map(_.direction.to).distinct
-      for (city <- trip.allCities; if current.curCity != city && !visited.contains(city)) {
+    } else if (current.days < trip.daysTo) {
+      val nonVisited = trip.allCities -- current.flights.map(_.direction.to)
+      for (city <- nonVisited if current.curCity != city) {
         getFlights(current, city).foreach(flight => processNode(new TripRoute(current, flight)))
       }
     }
