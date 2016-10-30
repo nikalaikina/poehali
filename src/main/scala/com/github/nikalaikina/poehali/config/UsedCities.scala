@@ -6,5 +6,5 @@ import scala.io.Source
 
 object UsedCities {
 
-  val cities: List[AirportId] = Source.fromFile("config/cities.txt").getLines.map(AirportId).toList
+  val cities: Set[String] = Source.fromFile("config/cities.txt").getLines.toList.toSet
 }

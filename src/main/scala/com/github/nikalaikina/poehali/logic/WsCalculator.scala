@@ -16,12 +16,15 @@ case class WsCalculator(spApi: ActorRef, socket: WebSocket, trip: Trip)(implicit
 
   import com.github.nikalaikina.poehali.util.JsonImplicits._
 
+  override val precision = Math.min(5 - trip.cities.size, 1)
+
   calc()
   socket.close()
   context.stop(self)
 
   def addRoute(current: TripRoute): Unit = {
     log.debug(s"Added route $current")
+    println(Json.toJson(JsonRoute(current.flights)).toString())
     socket.send(Json.toJson(JsonRoute(current.flights)).toString())
     updateState(current)
   }

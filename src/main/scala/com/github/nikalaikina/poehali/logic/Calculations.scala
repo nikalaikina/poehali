@@ -11,9 +11,9 @@ import scala.collection.immutable.IndexedSeq
 
 trait Calculations { this: FlightsProvider =>
 
-  def trip: Trip
+  val trip: Trip
 
-  val precision: Int = Math.min(5 - trip.cities.size, 1)
+  val precision: Int = 2
 
   var cost: Float = 1000f
 
@@ -49,16 +49,17 @@ trait Calculations { this: FlightsProvider =>
     if (isFine(current)) {
       addRoute(current)
     } else if (current.days < trip.daysTo) {
-      val nonVisited = trip.allCities -- current.flights.map(_.direction.to)
-      for (city <- nonVisited if current.curCity != city) {
+      val nonVisited = trip.allCities -- current.flights.map(_.direction.to) - current.curCity
+      for (city <- nonVisited) {
         getFlights(current, city).foreach(flight => processNode(new TripRoute(current, flight)))
       }
     }
   }
 
   private def getFlights(route: TripRoute, cityName: String): List[Flight] = {
-    getFlights(CityDirection(route.curCity, cityName), route.curDate.plusDays(2), route.curDate.plusDays(8))
-      .groupBy(_.date).toList.map(t => t._2.minBy(_.price)).sortBy(_.price).take(precision)
+    val flights = getFlights(CityDirection(route.curCity, cityName), route.curDate.plusDays(2), route.curDate.plusDays(8))
+    val take = flights.groupBy(_.date).toList.map(t => t._2.minBy(_.price)).sortBy(_.price)
+    take.take(precision)
   }
 
   def getFirstDays: IndexedSeq[LocalDate] = {

@@ -10,20 +10,15 @@ case class DefaultCities(cities: Map[AirportId, Airport]) {
   def closest(location: Location, n: Integer, usedOnly: Boolean = false) = {
     cities
       .values
-      .filter(c => !usedOnly || UsedCities.cities.contains(c.id))
+      .filter(c => !usedOnly || UsedCities.cities.contains(c.city))
       .toList
       .sortBy(c => DistanceCalculator.distance (location, c.location))
       .take(5)
   }
 
-  def idByName(name: String): Option[AirportId] = {
-    UsedCities.cities
-      .find(id => cities(id).city == name)
-  }
-
   def except(cityNames: Set[String], usedOnly: Boolean = false) = {
     cities.values
       .filter(city => cityNames.contains(city.city))
-      .filter(c => !usedOnly || UsedCities.cities.contains(c.id))
+      .filter(c => !usedOnly || UsedCities.cities.contains(c.city))
   }
 }

@@ -21,11 +21,11 @@ private case class SpFlight(flyFrom: String, flyTo: String, cityFrom: String, ci
   def date = new Timestamp(dTimeUTC * 1000).toLocalDateTime.toLocalDate
 
   def toFlight = {
-    val routes = List(route.head.toRoute)
+    val routes = route.map(_.toRoute)
     Flight(Direction(AirportId(flyFrom), AirportId(flyTo)),
       CityDirection(cityFrom, cityTo),
       price, date: LocalDate, dTimeUTC, aTimeUTC, routes,
-      s"https://www.kiwi.com/ru/booking?passengers=1&token=$booking_token")
+      s"https://www.kiwi.com/ru/booking?passengers=1&price=$price&token=$booking_token")
   }
 }
 
@@ -37,12 +37,13 @@ class SpApi extends AbstractActor {
 
   val url = "https://api.skypicker.com"
 
-  def flights(direction: CityDirection, dateFrom: LocalDate, dateTo: LocalDate): Future[List[Flight]] = {
+  def flights(direction: CityDirection, dateFrom: LocalDate, dateTo: LocalDate, direct: Boolean): Future[List[Flight]] = {
     val urlPattern = s"$url/flights?flyFrom=${direction.from}" +
                                  s"&to=${direction.to}" +
                                  s"&dateFrom=${formatter.format(dateFrom)}" +
                                  s"&dateTo=${formatter.format(dateTo)}" +
-                                 s"&directFlights=1"
+                                 s"&one_per_date=1" +
+                                 s"&directFlights=${if (direct) 1 else 0}"
     val future: Future[List[Flight]] = get(urlPattern)
       .map(parseFlights)
       .map(list => list.map(_.toFlight))
@@ -76,7 +77,7 @@ class SpApi extends AbstractActor {
 
   override def receive: Receive = {
     case GetPlaces => places() pipeTo sender()
-    case GetFlights(direction, dateFrom, dateTo) => flights(direction, dateFrom, dateTo) pipeTo sender()
+    case GetFlights(direction, dateFrom, dateTo, direct) => flights(direction, dateFrom, dateTo, direct) pipeTo sender()
   }
 }
 
