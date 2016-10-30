@@ -5,8 +5,10 @@ import akka.io.IO
 import akka.pattern.ask
 import com.github.nikalaikina.poehali.api.{RestInterface, SocketServer}
 import com.github.nikalaikina.poehali.bot.{DefaultCities, PoehaliBot}
-import com.github.nikalaikina.poehali.model.{Airport, AirportId}
+import com.github.nikalaikina.poehali.logic.WsCalculator
+import com.github.nikalaikina.poehali.model.{Airport, AirportId, Trip}
 import com.github.nikalaikina.poehali.sp.{PlacesProvider, SpApi}
+import play.api.libs.json.{JsSuccess, Json}
 import redis.clients.jedis.JedisPool
 import spray.can.Http
 import spray.can.Http.Event
@@ -32,6 +34,28 @@ object Boot extends App {
 
   runSocketServer()
   runRestApi()
+
+//  testWs
+
+  def testWs: Any = {
+    import com.github.nikalaikina.poehali.util.JsonImplicits._
+
+    val message =
+      """
+        |{"homeCities":["Vilnius"],"cities":["Brussels","Amsterdam"],"dateFrom":"2016-11-01","dateTo":"2017-03-30","daysFrom":4,"daysTo":16}
+      """.stripMargin
+    //      |{"homeCities":["Vilnius"],"cities":["Brussels","Amsterdam","Berlin", "Paris"],"dateFrom":"2016-11-01","dateTo":"2016-12-30","daysFrom":4,"daysTo":16}
+
+    Json
+
+      .fromJson[Trip](Json.parse(message)) match {
+      case JsSuccess(value, path) =>
+        WsCalculator.start(spApi, null, value)
+      case x =>
+        println(x)
+    }
+  }
+
 
   def getCache: ScalaCache[Array[Byte]] = {
     val jedis = new JedisPool()

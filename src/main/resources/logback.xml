@@ -1,6 +1,7 @@
 <configuration>
 
     <logger name="scalacache.guava" level="WARN"/>
+    <logger name="scalacache.redis" level="WARN"/>
     <logger name="akka" level="DEBUG" />
     <logger name="com" level="DEBUG" />
 

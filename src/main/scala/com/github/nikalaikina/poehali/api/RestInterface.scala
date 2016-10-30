@@ -4,6 +4,7 @@ import java.time.{DayOfWeek, Period}
 
 import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, Props}
 import akka.pattern.AskSupport
+import com.github.nikalaikina.poehali.config.UsedCities
 import com.github.nikalaikina.poehali.logic.ManualCacheHeater.Heat
 import com.github.nikalaikina.poehali.logic.{Cities, ManualCacheHeater, TripsCalculator}
 import com.github.nikalaikina.poehali.message.{GetCities, GetPlaces, GetRoutees, Routes}
@@ -94,6 +95,14 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
               cacheHeater ! Heat(list, Period.ofMonths(6))
               complete("started")
             }
+          }
+        }
+      } ~
+      pathPrefix("cacheHeating") {
+        pathEnd {
+          get {
+            cacheHeater ! Heat(UsedCities.cities.toList, Period.ofMonths(6))
+            complete("started")
           }
         }
       } ~
