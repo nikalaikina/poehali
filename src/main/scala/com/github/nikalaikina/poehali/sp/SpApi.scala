@@ -25,7 +25,7 @@ private case class SpFlight(flyFrom: String, flyTo: String, cityFrom: String, ci
     Flight(Direction(AirportId(flyFrom), AirportId(flyTo)),
       CityDirection(cityFrom, cityTo),
       price, date: LocalDate, dTimeUTC, aTimeUTC, routes,
-      s"https://www.kiwi.com/ru/booking?passengers=1&price=$price&token=$booking_token")
+      s"https://www.kiwi.com/ru/booking?price=$price&token=$booking_token")
   }
 }
 
@@ -36,19 +36,6 @@ class SpApi extends AbstractActor {
   val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
   val url = "https://api.skypicker.com"
-
-  def flights(direction: CityDirection, dateFrom: LocalDate, dateTo: LocalDate, direct: Boolean): Future[List[Flight]] = {
-    val urlPattern = s"$url/flights?flyFrom=${direction.from}" +
-                                 s"&to=${direction.to}" +
-                                 s"&dateFrom=${formatter.format(dateFrom)}" +
-                                 s"&dateTo=${formatter.format(dateTo)}" +
-                                 s"&one_per_date=1" +
-                                 s"&directFlights=${if (direct) 1 else 0}"
-    val future: Future[List[Flight]] = get(urlPattern)
-      .map(parseFlights)
-      .map(list => list.map(_.toFlight))
-    future
-  }
 
 
   private def parseFlights(string: String): List[SpFlight] = {
@@ -76,8 +63,20 @@ class SpApi extends AbstractActor {
   }
 
   override def receive: Receive = {
-    case GetPlaces => places() pipeTo sender()
-    case GetFlights(direction, dateFrom, dateTo, direct) => flights(direction, dateFrom, dateTo, direct) pipeTo sender()
+    case GetPlaces =>
+      places() pipeTo sender()
+    case x: GetFlights =>
+      import x._
+      val urlPattern = s"$url/flights?flyFrom=${direction.from}" +
+        s"&to=${direction.to}" +
+        s"&dateFrom=${formatter.format(dateFrom)}" +
+        s"&dateTo=${formatter.format(dateTo)}" +
+        s"&passengers=$passengers" +
+        s"&one_per_date=1" +
+        s"&directFlights=${if (direct) 1 else 0}"
+      get(urlPattern)
+        .map(parseFlights)
+        .map(_.map(_.toFlight)) pipeTo sender()
   }
 }
 

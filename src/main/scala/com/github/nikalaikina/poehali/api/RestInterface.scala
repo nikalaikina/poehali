@@ -76,12 +76,12 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
       pathPrefix("flights") {
         pathEnd {
           get {
-            parameters('homeCities, 'cities, 'dateFrom, 'dateTo, 'daysFrom.as[Int], 'daysTo.as[Int]) {
+            parameters('homeCities, 'cities, 'dateFrom, 'dateTo, 'daysFrom.as[Int], 'daysTo.as[Int], 'passengers.as[Int] ? 1) {
               processFlightsRequest
             }
           } ~
           post {
-            formField('homeCities, 'cities, 'dateFrom, 'dateTo, 'daysFrom.as[Int], 'daysTo.as[Int]) {
+            formField('homeCities, 'cities, 'dateFrom, 'dateTo, 'daysFrom.as[Int], 'daysTo.as[Int], 'passengers.as[Int] ? 1) {
               processFlightsRequest
             }
           }
@@ -128,11 +128,11 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
       }
     }
 
-  def processFlightsRequest: (String, String, String, String, Int, Int) => routing.Route = {
-    (homeCities, cities, dateFrom, dateTo, daysFrom, daysTo) => {
+  def processFlightsRequest: (String, String, String, String, Int, Int, Int) => routing.Route = {
+    (homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, passengers) => {
       respondWithMediaType(`application/json`) { (ctx: RequestContext) =>
         val t0 = System.nanoTime()
-        val trip = new Trip(homeCities, cities, dateFrom, dateTo, daysFrom, daysTo)
+        val trip = new Trip(homeCities, cities, dateFrom, dateTo, daysFrom, daysTo, passengers)
         (TripsCalculator.logic(spApi, trip) ? GetRoutees(trip))
           .mapTo[Routes]
           .map(r => r.routes.map(tr => JsonRoute(tr.flights)))

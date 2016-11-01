@@ -19,6 +19,8 @@ trait Calculations { this: FlightsProvider =>
 
   var citiesCount: Int = 1
 
+  override val passengers: Int = trip.passengers
+
 
   def calc(): Unit = {
     for (city <- trip.homeCities; day <- getFirstDays) {

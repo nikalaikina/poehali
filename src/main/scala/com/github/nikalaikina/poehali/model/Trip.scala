@@ -10,7 +10,8 @@ case class Trip(homeCities: Set[String],
                 dateFrom: LocalDate,
                 dateTo: LocalDate,
                 daysFrom: Int,
-                daysTo: Int) {
+                daysTo: Int,
+                passengers: Int = 1) {
 
 
   def this(_homeCities: String,
@@ -18,14 +19,16 @@ case class Trip(homeCities: Set[String],
            _dateFrom: String,
            _dateTo: String,
            _daysFrom: Int,
-           _daysTo: Int) {
+           _daysTo: Int,
+           _passengers: Int) {
 
     this (Trip.getSet(_homeCities),
           Trip.getSet(_homeCities) ++ Trip.getSet(_cities),
           LocalDate.parse(_dateFrom, Trip.formatter),
           LocalDate.parse(_dateTo, Trip.formatter),
           _daysFrom,
-          _daysTo)
+          _daysTo,
+          _passengers)
   }
 
   def this(config: Config) {
