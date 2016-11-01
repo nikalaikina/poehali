@@ -13,7 +13,7 @@ trait Calculations { this: FlightsProvider =>
 
   val trip: Trip
 
-  val precision: Int = 2
+  val precision = Math.max(6 - trip.cities.size, 1)
 
   var cost: Float = 1000f
 

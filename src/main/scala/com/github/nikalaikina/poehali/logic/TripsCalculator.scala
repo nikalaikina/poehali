@@ -13,8 +13,6 @@ import scalacache.ScalaCache
 case class TripsCalculator(spApi: ActorRef, trip: Trip)(implicit val citiesCache: ScalaCache[Array[Byte]])
   extends AbstractActor with FlightsProvider with Calculations {
 
-  override val precision = Math.max(7 - trip.cities.size, 1)
-
   var routes = new ListBuffer[TripRoute]()
 
   def addRoute(current: TripRoute): Unit = {
