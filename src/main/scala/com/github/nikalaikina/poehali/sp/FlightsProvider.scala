@@ -31,6 +31,7 @@ trait FlightsProvider { actor: AbstractActor with AskSupport =>
   var time = 0L
   var n = 0
 
+  val passengers = 1
 
   def getFlights(direction: CityDirection, dateFrom: LocalDate, dateTo: LocalDate): List[Flight] = {
     val cached = getFlightsCached(direction)
