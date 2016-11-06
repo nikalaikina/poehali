@@ -1,4 +1,4 @@
-package com.github.nikalaikina.poehali.sp
+package com.github.nikalaikina.poehali.external.sp
 
 import java.sql.Timestamp
 import java.time.LocalDate
@@ -6,7 +6,7 @@ import java.time.format.DateTimeFormatter
 
 import akka.pattern.pipe
 import com.github.nikalaikina.poehali.common.AbstractActor
-import com.github.nikalaikina.poehali.message.{GetFlights, GetPlaces}
+import com.github.nikalaikina.poehali.message.{GetTickets, GetPlaces}
 import com.github.nikalaikina.poehali.model._
 import info.mukel.telegrambot4s.models.Location
 import org.json4s.JsonAST.JValue
@@ -65,7 +65,7 @@ class SpApi extends AbstractActor {
   override def receive: Receive = {
     case GetPlaces =>
       places() pipeTo sender()
-    case x: GetFlights =>
+    case x: GetTickets =>
       import x._
       val urlPattern = s"$url/flights?flyFrom=${direction.from}" +
         s"&to=${direction.to}" +

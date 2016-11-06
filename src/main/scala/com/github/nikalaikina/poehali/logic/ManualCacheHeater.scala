@@ -7,13 +7,13 @@ import akka.actor.{ActorContext, ActorRef, Props}
 import com.github.nikalaikina.poehali.common.AbstractActor
 import com.github.nikalaikina.poehali.logic.ManualCacheHeater.Heat
 import com.github.nikalaikina.poehali.model.CityDirection
-import com.github.nikalaikina.poehali.sp.FlightsProvider
+import com.github.nikalaikina.poehali.external.sp.TicketsProvider
 
 import scalacache.ScalaCache
 
 
 case class ManualCacheHeater(spApi: ActorRef)(implicit val citiesCache: ScalaCache[Array[Byte]])
-  extends AbstractActor with FlightsProvider {
+  extends AbstractActor with TicketsProvider {
 
 
   override def receive: Receive = {

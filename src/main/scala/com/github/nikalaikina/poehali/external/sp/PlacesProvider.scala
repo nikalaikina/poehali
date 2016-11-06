@@ -1,4 +1,4 @@
-package com.github.nikalaikina.poehali.sp
+package com.github.nikalaikina.poehali.external.sp
 
 import akka.actor.{ActorRef, Props}
 import akka.pattern.pipe

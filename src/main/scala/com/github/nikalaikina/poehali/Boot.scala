@@ -7,7 +7,7 @@ import com.github.nikalaikina.poehali.api.{RestInterface, SocketServer}
 import com.github.nikalaikina.poehali.bot.{DefaultCities, PoehaliBot}
 import com.github.nikalaikina.poehali.logic.WsCalculator
 import com.github.nikalaikina.poehali.model.{Airport, AirportId, Trip}
-import com.github.nikalaikina.poehali.sp.{PlacesProvider, SpApi}
+import com.github.nikalaikina.poehali.external.sp.{PlacesProvider, SpApi}
 import play.api.libs.json.{JsSuccess, Json}
 import redis.clients.jedis.JedisPool
 import spray.can.Http
