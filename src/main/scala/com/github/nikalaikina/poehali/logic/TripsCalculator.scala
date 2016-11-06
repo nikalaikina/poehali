@@ -4,14 +4,14 @@ import akka.actor._
 import com.github.nikalaikina.poehali.common.AbstractActor
 import com.github.nikalaikina.poehali.message.{GetRoutees, Routes}
 import com.github.nikalaikina.poehali.model._
-import com.github.nikalaikina.poehali.sp.FlightsProvider
+import com.github.nikalaikina.poehali.external.sp.TicketsProvider
 
 import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
 import scalacache.ScalaCache
 
 case class TripsCalculator(spApi: ActorRef, trip: Trip)(implicit val citiesCache: ScalaCache[Array[Byte]])
-  extends AbstractActor with FlightsProvider with Calculations {
+  extends AbstractActor with TicketsProvider with Calculations {
 
   var routes = new ListBuffer[TripRoute]()
 

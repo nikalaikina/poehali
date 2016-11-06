@@ -1,4 +1,4 @@
-package com.github.nikalaikina.poehali.sp
+package com.github.nikalaikina.poehali.external.sp
 
 import java.lang.Class
 import java.time.LocalDate
@@ -7,7 +7,7 @@ import java.time.temporal.ChronoUnit
 import akka.actor.{Actor, ActorRef}
 import akka.pattern.AskSupport
 import com.github.nikalaikina.poehali.common.AbstractActor
-import com.github.nikalaikina.poehali.message.GetFlights
+import com.github.nikalaikina.poehali.message.GetTickets
 import com.github.nikalaikina.poehali.model.{CityDirection, Flight}
 
 import scala.concurrent.{Await, Future}
@@ -19,7 +19,7 @@ import scala.reflect._
 import scala.util.{Failure, Success}
 
 
-trait FlightsProvider { actor: AbstractActor with AskSupport =>
+trait TicketsProvider { actor: AbstractActor with AskSupport =>
 
   import scalacache._
   implicit val flags = Flags.defaultFlags
@@ -54,7 +54,7 @@ trait FlightsProvider { actor: AbstractActor with AskSupport =>
     }
 
   def retrieve(direction: CityDirection, dateFrom: LocalDate, dateTo: LocalDate, direct: Boolean): List[Flight] = {
-    val f = (spApi ? GetFlights(direction, dateFrom, dateTo, direct)).mapTo[List[Flight]]
+    val f = (spApi ? GetTickets(direction, dateFrom, dateTo, direct, passengers)).mapTo[List[Flight]]
 
     val t = System.nanoTime()
     val result = Await.ready(f, Duration.Inf).value.get

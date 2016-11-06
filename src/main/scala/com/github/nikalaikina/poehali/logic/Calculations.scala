@@ -4,12 +4,12 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit._
 
 import com.github.nikalaikina.poehali.model.{CityDirection, Flight, Trip, TripRoute}
-import com.github.nikalaikina.poehali.sp.FlightsProvider
+import com.github.nikalaikina.poehali.external.sp.TicketsProvider
 
 import scala.collection.immutable.IndexedSeq
 
 
-trait Calculations { this: FlightsProvider =>
+trait Calculations { this: TicketsProvider =>
 
   val trip: Trip
 
