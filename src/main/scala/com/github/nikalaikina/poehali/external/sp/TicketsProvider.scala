@@ -40,7 +40,7 @@ trait TicketsProvider { actor: AbstractActor with AskSupport =>
   }
 
   def getFlightsCached(direction: CityDirection): List[Flight] =
-    sync.cachingWithTTL(direction)(24 hours) {
+    sync.cachingWithTTL(direction)(6 hours) {
       val dateFrom = LocalDate.now()
       val dateTo = dateFrom.plusYears(1)
       val flights = retrieve(direction, dateFrom, dateTo, direct = false)
