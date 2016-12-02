@@ -67,8 +67,8 @@ class SpApi extends AbstractActor {
       places() pipeTo sender()
     case x: GetTickets =>
       import x._
-      val urlPattern = s"$url/flights?flyFrom=${direction.from}" +
-        s"&to=${direction.to}" +
+      val urlPattern = s"$url/flights?flyFrom=${direction.from.replaceAll(" ", "%20")}" +
+        s"&to=${direction.to.replaceAll(" ", "%20")}" +
         s"&dateFrom=${formatter.format(dateFrom)}" +
         s"&dateTo=${formatter.format(dateTo)}" +
         s"&passengers=$passengers" +
