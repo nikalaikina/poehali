@@ -22,9 +22,7 @@ case class WsCalculator(spApi: ActorRef, socket: WebSocket, trip: Trip)(implicit
 
   def addRoute(current: TripRoute): Unit = {
     log.debug(s"Added route $current")
-    println(Json.toJson(JsonRoute(current.flights)).toString())
     socket.send(Json.toJson(JsonRoute(current.flights)).toString())
-    updateState(current)
   }
 }
 

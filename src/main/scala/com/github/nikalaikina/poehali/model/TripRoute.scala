@@ -45,13 +45,13 @@ class TripRoute(val firstCity: String, val firstDate: LocalDate) {
     flights = node.flights :+ flight
   }
 
-  def days = if (flights.isEmpty) 0L else DAYS.between(firstDate, flights.last.date)
+  lazy val days = if (flights.isEmpty) 0L else DAYS.between(firstDate, flights.last.date)
 
-  def cost = flights.map(_.price).sum
+  val cost = flights.map(_.price).sum
 
-  def curCity = if (flights.isEmpty) firstCity else flights.last.direction.to
+  val curCity = if (flights.isEmpty) firstCity else flights.last.direction.to
 
-  def curDate = if (flights.isEmpty) firstDate else flights.last.date
+  val curDate = if (flights.isEmpty) firstDate else flights.last.date
 
-  override def toString = s"${flights.size} $cost\t$flights"
+  override val toString = s"${flights.size} $cost\t$flights"
 }
