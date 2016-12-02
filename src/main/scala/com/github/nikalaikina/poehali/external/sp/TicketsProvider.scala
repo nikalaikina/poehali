@@ -10,6 +10,7 @@ import com.github.nikalaikina.poehali.common.AbstractActor
 import com.github.nikalaikina.poehali.message.GetTickets
 import com.github.nikalaikina.poehali.model.{CityDirection, Flight}
 
+import scala.collection.mutable
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -28,15 +29,16 @@ trait TicketsProvider { actor: AbstractActor with AskSupport =>
   implicit val citiesCache: ScalaCache[Array[Byte]]
   val spApi: ActorRef
 
+  val localCache: mutable.Map[CityDirection, List[Flight]] = mutable.Map()
+
   var time = 0L
   var n = 0
 
   val passengers = 1
 
   def getFlights(direction: CityDirection, dateFrom: LocalDate, dateTo: LocalDate): List[Flight] = {
-    val cached = getFlightsCached(direction)
-    val filter = cached.filter(f => !f.date.isBefore(dateFrom) && !f.date.isAfter(dateTo))
-    filter
+    val cached = localCache.getOrElseUpdate(direction, getFlightsCached(direction))
+    cached.filter(f => !f.date.isBefore(dateFrom) && !f.date.isAfter(dateTo))
   }
 
   def getFlightsCached(direction: CityDirection): List[Flight] =
