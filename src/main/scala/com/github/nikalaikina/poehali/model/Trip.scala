@@ -1,4 +1,4 @@
-package com.github.nikalaikina.poehali.api
+package com.github.nikalaikina.poehali.model
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -11,8 +11,7 @@ case class Trip(homeCities: Set[String],
                 dateTo: LocalDate,
                 daysFrom: Int,
                 daysTo: Int,
-                cost: Int,
-                citiesCount: Int) {
+                passengers: Int = 1) {
 
 
   def this(_homeCities: String,
@@ -21,8 +20,7 @@ case class Trip(homeCities: Set[String],
            _dateTo: String,
            _daysFrom: Int,
            _daysTo: Int,
-           _cost: Int,
-           _citiesCount: Int) {
+           _passengers: Int) {
 
     this (Trip.getSet(_homeCities),
           Trip.getSet(_homeCities) ++ Trip.getSet(_cities),
@@ -30,8 +28,7 @@ case class Trip(homeCities: Set[String],
           LocalDate.parse(_dateTo, Trip.formatter),
           _daysFrom,
           _daysTo,
-          _cost,
-          _citiesCount)
+          _passengers)
   }
 
   def this(config: Config) {
@@ -40,10 +37,10 @@ case class Trip(homeCities: Set[String],
           dateFrom = LocalDate.parse(config.getString("dateFrom"), Trip.formatter),
           dateTo = LocalDate.parse(config.getString("dateTo"), Trip.formatter),
           daysFrom = config.getInt("daysFrom"),
-          daysTo = config.getInt("daysTo"),
-          cost = config.getInt("cost"),
-          citiesCount = config.getInt("citiesCount"))
+          daysTo = config.getInt("daysTo"))
   }
+
+  val allCities = homeCities ++ cities
 }
 
 object Trip{
