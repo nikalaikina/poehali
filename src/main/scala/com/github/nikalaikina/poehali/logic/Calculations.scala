@@ -13,7 +13,7 @@ trait Calculations { this: TicketsProvider =>
 
   val trip: Trip
 
-  val precision = Math.max(6 - trip.cities.size, 1)
+  val precision = 1
 
   var cost: Float = 1000f
 
