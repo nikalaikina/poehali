@@ -37,21 +37,17 @@ case class Airport(id: AirportId, city: String, score: Int, location: Location)
 
 case class Route(flightNo: Long, airline: String)
 
-class TripRoute(val firstCity: String, val firstDate: LocalDate) {
-  var flights: List[Flight] = List()
+case class TripRoute(flights: List[Flight]) {
 
-  def this(node: TripRoute, flight: Flight) {
-    this(node.firstCity, node.firstDate)
-    flights = node.flights :+ flight
-  }
+  val firstDate = flights.head.date
 
-  lazy val days = if (flights.isEmpty) 0L else DAYS.between(firstDate, flights.last.date)
+  lazy val days = DAYS.between(firstDate, flights.last.date)
 
   val cost = flights.map(_.price).sum
 
-  val curCity = if (flights.isEmpty) firstCity else flights.last.direction.to
+  val curCity = flights.last.direction.to
 
-  val curDate = if (flights.isEmpty) firstDate else flights.last.date
+  val curDate = flights.last.date
 
   override val toString = s"${flights.size} $cost\t$flights"
 }

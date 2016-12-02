@@ -23,8 +23,17 @@ trait Calculations { this: TicketsProvider =>
 
 
   def calc(): Unit = {
-    for (city <- trip.homeCities; day <- getFirstDays) {
-      processNode(new TripRoute(city, day))
+    val treesForCity = 100 / trip.cities.size
+
+    val from = trip.dateFrom
+    val to = trip.dateTo.minusDays(trip.daysFrom)
+    for (homeCity <- trip.homeCities; city <- trip.cities) {
+      getFlights(CityDirection(homeCity, city), from, to)
+        .sortBy(_.price)
+        .take(treesForCity)
+        .foreach { flight =>
+          processNode(TripRoute(List(flight)))
+        }
     }
   }
 
@@ -53,7 +62,7 @@ trait Calculations { this: TicketsProvider =>
     } else if (current.days < trip.daysTo) {
       val nonVisited = trip.allCities -- current.flights.map(_.direction.to) - current.curCity
       for (city <- nonVisited) {
-        getFlights(current, city).foreach(flight => processNode(new TripRoute(current, flight)))
+        getFlights(current, city).foreach(flight => processNode(TripRoute(current.flights :+ flight)))
       }
     }
   }
@@ -62,13 +71,6 @@ trait Calculations { this: TicketsProvider =>
     val flights = getFlights(CityDirection(route.curCity, cityName), route.curDate.plusDays(2), route.curDate.plusDays(8))
     val take = flights.groupBy(_.date).toList.map(t => t._2.minBy(_.price)).sortBy(_.price)
     take.take(precision)
-  }
-
-  def getFirstDays: IndexedSeq[LocalDate] = {
-    val from = trip.dateFrom
-    val to = trip.dateTo.minusDays(trip.daysFrom)
-    val n = DAYS.between(from, to).toInt
-    for (i <- 1 to n) yield from.plusDays(i)
   }
 
   def addRoute(route: TripRoute)
