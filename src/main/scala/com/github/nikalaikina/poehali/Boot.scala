@@ -3,57 +3,88 @@ package com.github.nikalaikina.poehali
 import akka.actor._
 import akka.io.IO
 import akka.pattern.ask
-import akka.util.Timeout
-import com.github.nikalaikina.poehali.api.RestInterface
-import com.github.nikalaikina.poehali.bot.{Cities, PoehaliBot}
-import com.github.nikalaikina.poehali.message.GetPlaces
-import com.github.nikalaikina.poehali.sp.{City, FlightsProvider, PlacesProvider, SpApi}
+import com.github.nikalaikina.poehali.api.{RestInterface, SocketServer}
+import com.github.nikalaikina.poehali.bot.{DefaultCities, PoehaliBot}
+import com.github.nikalaikina.poehali.logic.WsCalculator
+import com.github.nikalaikina.poehali.model.{Airport, AirportId, Trip}
+import com.github.nikalaikina.poehali.external.sp.{PlacesProvider, SpApi}
+import play.api.libs.json.{JsSuccess, Json}
+import redis.clients.jedis.JedisPool
 import spray.can.Http
+import spray.can.Http.Event
 
 import scala.concurrent.Future
-import scala.concurrent.duration._
 import scalacache.ScalaCache
-import scalacache.guava.GuavaCache
+import scalacache.redis.RedisCache
+
 
 object Boot extends App {
-  val host = "localhost"
+  val host = "0.0.0.0"
   val port = 8888
+
+  import com.github.nikalaikina.poehali.util.TimeoutImplicits.waitForever
 
   implicit val system = ActorSystem("routes-service")
   implicit val executionContext = system.dispatcher
 
-  implicit val cache = ScalaCache(GuavaCache())
+  implicit val scalaCache = getCache
 
-  private val spApi: ActorRef = system.actorOf(Props(classOf[SpApi]), "spApi")
-  system.actorOf(FlightsProvider.props(spApi), "flightsProvider")
-  private val placesActor: ActorRef = system.actorOf(PlacesProvider.props(spApi), "placesProvider")
-  val api = system.actorOf(Props(classOf[RestInterface], placesActor), "httpInterface")
+  val spApi: ActorRef = system.actorOf(Props(classOf[SpApi]), "spApi")
+  val placesActor: ActorRef = system.actorOf(PlacesProvider.props(spApi), "placesProvider")
 
-  runBot()
+  runSocketServer()
+  runRestApi()
 
-  implicit val timeout: Timeout = Timeout(1000 seconds)
+//  testWs
 
-  IO(Http).ask(Http.Bind(listener = api, interface = host, port = port))
-    .mapTo[Http.Event]
-    .map {
-      case Http.Bound(address) =>
-        println(s"REST interface bound to $address")
-      case Http.CommandFailed(cmd) =>
-        println("REST interface could not bind to " +
-          s"$host:$port, ${cmd.failureMessage}")
-        system.shutdown()
+  def testWs: Any = {
+    import com.github.nikalaikina.poehali.util.JsonImplicits._
+
+    val message =
+      """
+        |{"homeCities":["Vilnius"],"cities":["Brussels","Amsterdam"],"dateFrom":"2016-11-01","dateTo":"2017-03-30","daysFrom":4,"daysTo":16}
+      """.stripMargin
+    //      |{"homeCities":["Vilnius"],"cities":["Brussels","Amsterdam","Berlin", "Paris"],"dateFrom":"2016-11-01","dateTo":"2016-12-30","daysFrom":4,"daysTo":16}
+
+    Json
+
+      .fromJson[Trip](Json.parse(message)) match {
+      case JsSuccess(value, path) =>
+        WsCalculator.start(spApi, null, value)
+      case x =>
+        println(x)
     }
-
-  def runBot(): Unit = {
-    val future: Future[Any] = placesActor ? GetPlaces()
-    val eventualCities: Future[List[City]] = future
-      .mapTo[List[City]]
-    eventualCities
-      .map(list => {
-        val fullMap: Map[String, City] = list.map(c => c.id -> c).toMap
-        system.actorOf(Props(classOf[PoehaliBot], Cities(fullMap)), "bot")
-      })
-
   }
 
+
+  def getCache: ScalaCache[Array[Byte]] = {
+    val jedis = new JedisPool()
+    val cache = new RedisCache(jedisPool = jedis, useLegacySerialization = true)
+    ScalaCache(cache)
+  }
+
+  def runSocketServer(): Unit = {
+    val socketServer = SocketServer("localhost", 4242, system.log, spApi)
+    socketServer.start()
+  }
+
+  def runRestApi(): Future[Any] = {
+    val api = system.actorOf(RestInterface.props(placesActor: ActorRef, spApi: ActorRef), "httpInterface")
+
+    IO(Http).ask(Http.Bind(listener = api, interface = host, port = port))
+      .mapTo[Event]
+      .map {
+        case Http.Bound(address) =>
+          system.log.debug(s"REST interface bound to $address")
+        case Http.CommandFailed(cmd) =>
+          system.log.error("REST interface could not bind to " +
+            s"$host:$port, ${cmd.failureMessage}")
+          system.terminate()
+      }
+  }
+
+  def runBot(list: List[Airport]): ActorRef = {
+    val fullMap: Map[AirportId, Airport] = list.map(c => c.id -> c).toMap
+    system.actorOf(Props(classOf[PoehaliBot], DefaultCities(fullMap)), "bot")
+  }
 }

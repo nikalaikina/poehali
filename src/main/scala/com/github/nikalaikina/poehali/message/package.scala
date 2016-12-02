@@ -1,18 +1,14 @@
-package com.github.nikalaikina.poehali
+package com.github.nikalaikina.poehali.message
 
 import java.time.LocalDate
 
-import com.github.nikalaikina.poehali.logic.TripRoute
-import com.github.nikalaikina.poehali.sp.Direction
+import com.github.nikalaikina.poehali.model.{CityDirection, Trip, TripRoute}
 
+sealed trait Request
+case class GetRoutees(trip: Trip) extends Request
+case class GetTickets(direction: CityDirection, dateFrom: LocalDate, dateTo: LocalDate, direct: Boolean, passengers: Int = 1) extends Request
+case class GetPlaces(number: Int = Integer.MAX_VALUE) extends Request
+case object GetCities extends Request
 
-package object message {
-
-  sealed trait Request
-  case object GetRoutees extends Request
-  case class GetFlights(direction: Direction, dateFrom: LocalDate, dateTo: LocalDate) extends Request
-  case class GetPlaces(number: Int = Integer.MAX_VALUE) extends Request
-
-  sealed trait Response
-  case class Routes(routes: List[TripRoute]) extends Response
-}
+sealed trait Response
+case class Routes(routes: List[TripRoute]) extends Response
