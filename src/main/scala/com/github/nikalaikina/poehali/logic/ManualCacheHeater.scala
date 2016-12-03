@@ -19,10 +19,9 @@ case class ManualCacheHeater(spApi: ActorRef)(implicit val citiesCache: ScalaCac
   override def receive: Receive = {
     case Heat(cities, time) =>
       val t = System.nanoTime()
-      val now = LocalDate.now()
       for (from <- cities; to <- cities if from != to) {
         val t = System.nanoTime()
-        getFlights(CityDirection(from, to), now, now.plus(time))
+        getFlightsCached(CityDirection(from, to))
         log.warning(s"${(System.nanoTime() - t) / 1000 / 1000} sec\t\tfor $from $to")
       }
       log.warning(s"Cache heated in ${(System.nanoTime() - t) / 1000 / 1000 / 1000} for ${cities.size} cities")
