@@ -17,7 +17,7 @@ import spray.http.{HttpRequest, HttpResponse}
 
 import scala.concurrent.Future
 
-private case class SpFlight(flyFrom: String, flyTo: String, cityFrom: String, cityTo: String, price: Float, dTimeUTC: Long, aTimeUTC: Long, route: List[SpRoute], booking_token: String) {
+private case class SpFlight(flyFrom: String, flyTo: String, cityFrom: String, cityTo: String, price: Float, dTimeUTC: Long, aTimeUTC: Long, route: List[SpRoute], booking_token: String, fly_duration: String) {
   def date = new Timestamp(dTimeUTC * 1000).toLocalDateTime.toLocalDate
 
   def toFlight = {
@@ -25,7 +25,7 @@ private case class SpFlight(flyFrom: String, flyTo: String, cityFrom: String, ci
     Flight(Direction(AirportId(flyFrom), AirportId(flyTo)),
       CityDirection(cityFrom, cityTo),
       price, date: LocalDate, dTimeUTC, aTimeUTC, routes,
-      s"https://www.kiwi.com/ru/booking?price=$price&token=$booking_token")
+      s"https://www.kiwi.com/ru/booking?price=$price&token=$booking_token", fly_duration)
   }
 }
 

@@ -26,7 +26,7 @@ trait Ticket {
 
 case class BusTicket(direction: CityDirection, price: Float, date: LocalDate, timeFrom: Long, timeTo: Long, url: String) extends Ticket
 
-case class Flight(airports: Direction, direction: CityDirection, price: Float, date: LocalDate, timeFrom: Long, timeTo: Long, routes: List[Route], url: String) extends Ticket {
+case class Flight(airports: Direction, direction: CityDirection, price: Float, date: LocalDate, timeFrom: Long, timeTo: Long, routes: List[Route], url: String, duration: String) extends Ticket {
   override def equals(o: scala.Any): Boolean = o match {
     case that: Flight => airports.equals(that.airports) && price.equals(that.price) && date.equals(that.date)
     case _ => false
