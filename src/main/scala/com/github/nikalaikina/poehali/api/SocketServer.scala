@@ -7,6 +7,7 @@ import java.net.InetSocketAddress
 import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem}
 import akka.event.LoggingAdapter
 import com.github.nikalaikina.poehali.common.AbstractActor
+import com.github.nikalaikina.poehali.dao.{CityUsed, CityUsedAsHome}
 import com.github.nikalaikina.poehali.logic.{Cities, WsCalculator}
 import com.github.nikalaikina.poehali.model.{Flight, Trip, TripRoute}
 import org.java_websocket.WebSocket
@@ -39,8 +40,10 @@ case class SocketServer(host: String,
   override def onMessage(webSocket: WebSocket, message: String) = {
     log.info(s"message given: $message")
     Json.fromJson[Trip](Json.parse(message)) match {
-      case JsSuccess(value, path) =>
-        map += webSocket -> WsCalculator.start(spApi, webSocket, value)
+      case JsSuccess(trip, path) =>
+        map += webSocket -> WsCalculator.start(spApi, webSocket, trip)
+        trip.cities.foreach(c => context.eventStream.publish(CityUsed(c)))
+        trip.homeCities.foreach(c => context.eventStream.publish(CityUsedAsHome(c)))
       case x =>
         println(x)
     }

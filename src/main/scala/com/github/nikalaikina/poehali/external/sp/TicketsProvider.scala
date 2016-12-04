@@ -7,6 +7,7 @@ import java.time.temporal.ChronoUnit
 import akka.actor.{Actor, ActorRef}
 import akka.pattern.AskSupport
 import com.github.nikalaikina.poehali.common.AbstractActor
+import com.github.nikalaikina.poehali.dao.CacheUpdated
 import com.github.nikalaikina.poehali.message.GetTickets
 import com.github.nikalaikina.poehali.model.{CityDirection, Flight}
 
@@ -31,9 +32,6 @@ trait TicketsProvider { actor: AbstractActor with AskSupport =>
 
   val localCache: mutable.Map[CityDirection, List[Flight]] = mutable.Map()
 
-  var time = 0L
-  var n = 0
-
   val passengers = 1
 
   def getFlights(direction: CityDirection, dateFrom: LocalDate, dateTo: LocalDate): List[Flight] = {
@@ -57,14 +55,7 @@ trait TicketsProvider { actor: AbstractActor with AskSupport =>
 
   def retrieve(direction: CityDirection, dateFrom: LocalDate, dateTo: LocalDate, direct: Boolean): List[Flight] = {
     val f = (spApi ? GetTickets(direction, dateFrom, dateTo, direct, passengers)).mapTo[List[Flight]]
-
-    val t = System.nanoTime()
     val result = Await.ready(f, Duration.Inf).value.get
-    val time1 = System.nanoTime() - t
-    time += time1
-    n += 1
-
-    log.warning(s"time: ${time1 / 1000 / 1000}\taverage: ${time / 1000 / 1000 / n}")
 
     result match {
       case Success(t) =>
@@ -74,6 +65,7 @@ trait TicketsProvider { actor: AbstractActor with AskSupport =>
           val mid = dateFrom.plusDays(days)
           retrieve(direction, dateFrom, mid, direct) ++ retrieve(direction, mid.plusDays(1), dateTo, direct)
         } else {
+          context.system.eventStream.publish(CacheUpdated(direction))
           t
         }
       case Failure(e) => List()
