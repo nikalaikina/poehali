@@ -27,7 +27,8 @@ trait TicketsProvider { actor: AbstractActor with AskSupport =>
   implicit val flags = Flags.defaultFlags
   implicit val cc: GZippingBinaryCodec[List[Flight]] = scalacache.serialization.GZippingJavaAnyBinaryCodec.default[List[Flight]]
 
-  implicit val citiesCache: ScalaCache[Array[Byte]]
+  val cacheTtl = 6 hours
+  implicit val cache: ScalaCache[Array[Byte]]
   val spApi: ActorRef
 
   val localCache: mutable.Map[CityDirection, List[Flight]] = mutable.Map()
@@ -39,19 +40,24 @@ trait TicketsProvider { actor: AbstractActor with AskSupport =>
     cached.filter(f => !f.date.isBefore(dateFrom) && !f.date.isAfter(dateTo))
   }
 
-  def getFlightsCached(direction: CityDirection): List[Flight] =
-    sync.cachingWithTTL(direction)(6 hours) {
-      val dateFrom = LocalDate.now()
-      val dateTo = dateFrom.plusYears(1)
-      val flights = retrieve(direction, dateFrom, dateTo, direct = false)
-      if (flights.isEmpty) {
-        log.error("EMPTY " + "*" * 80)
-      }
-      val minDirectCost = flights.filter(_.routes.size == 1).map(_.price).sortWith(_ < _).headOption.getOrElse(-1)
-      val minNonDirectCost = flights.filter(_.routes.size > 1).map(_.price).sortWith(_ < _).headOption.getOrElse(-1)
-      log.info(s"${direction.from}\t\t${direction.to}\t\t${flights.size}\t\t$minDirectCost\t\t$minNonDirectCost")
-      flights
+  def getFlightsCached(direction: CityDirection): List[Flight] = {
+    sync.cachingWithTTL(direction)(cacheTtl) {
+      retrieve(direction)
     }
+  }
+
+  def retrieve(direction: CityDirection): List[Flight] = {
+    val dateFrom = LocalDate.now()
+    val dateTo = dateFrom.plusYears(1)
+    val flights = retrieve(direction, dateFrom, dateTo, direct = false)
+    if (flights.isEmpty) {
+      log.error("EMPTY " + "*" * 80)
+    }
+    val minDirectCost = flights.filter(_.routes.size == 1).map(_.price).sortWith(_ < _).headOption.getOrElse(-1)
+    val minNonDirectCost = flights.filter(_.routes.size > 1).map(_.price).sortWith(_ < _).headOption.getOrElse(-1)
+    log.info(s"${direction.from}\t\t${direction.to}\t\t${flights.size}\t\t$minDirectCost\t\t$minNonDirectCost")
+    flights
+  }
 
   def retrieve(direction: CityDirection, dateFrom: LocalDate, dateTo: LocalDate, direct: Boolean): List[Flight] = {
     val f = (spApi ? GetTickets(direction, dateFrom, dateTo, direct, passengers)).mapTo[List[Flight]]
