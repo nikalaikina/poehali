@@ -1,7 +1,6 @@
 package com.github.nikalaikina.poehali.external.sp
 
-import java.lang.Class
-import java.time.LocalDate
+import java.time.{Clock, LocalDate}
 import java.time.temporal.ChronoUnit
 
 import akka.actor.{Actor, ActorRef}
@@ -47,7 +46,7 @@ trait TicketsProvider { actor: AbstractActor with AskSupport =>
   }
 
   def retrieve(direction: CityDirection): List[Flight] = {
-    val dateFrom = LocalDate.now()
+    val dateFrom = LocalDate.now(Clock.systemUTC())
     val dateTo = dateFrom.plusYears(1)
     val flights = retrieve(direction, dateFrom, dateTo, direct = false)
     if (flights.isEmpty) {
