@@ -27,7 +27,7 @@ trait BaseDataAccess[T <: DbModel] {
   }
 
   def update(e: T): Unit = {
-    collection.updateOne(equal("_id", new ObjectId(e.id.get)), toDoc(e)).results()
+    collection.findOneAndReplace(equal("_id", new ObjectId(e.id.get)), toDoc(e)).results()
   }
 
   def toDoc(e: T): Document
