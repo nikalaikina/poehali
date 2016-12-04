@@ -1,6 +1,6 @@
 package com.github.nikalaikina.poehali.dao
 
-import java.time.LocalDate
+import java.time.{Clock, LocalDateTime}
 import java.time.temporal.ChronoUnit._
 import java.util.concurrent.TimeUnit
 
@@ -26,7 +26,7 @@ class Dao {
       cities <- cityDao.all
       cacheUpdates <- cacheUpdateDao.all
     } yield {
-      val now = LocalDate.now()
+      val now = LocalDateTime.now(Clock.systemUTC())
       val aboutToExpire = cacheUpdates.filter(cu => HOURS.between(cu.lastUpdated, now) > 5)
       val citiesRange = cities.map(c => c.name -> (c.usedAsHome + c.used)).toMap
       aboutToExpire
@@ -98,16 +98,16 @@ class CacheUpdateDao extends BaseDataAccess[CacheUpdate] {
       city1 <- d.get("city1").map(_.asString().getValue)
       city2 <- d.get("city2").map(_.asString().getValue)
       lastUpdated <- d.get("lastUpdated").map(_.asString().getValue)
-    } yield CacheUpdate(CityDirection(city1, city2), LocalDate.parse(lastUpdated), Some(id))
+    } yield CacheUpdate(CityDirection(city1, city2), LocalDateTime.parse(lastUpdated), Some(id))
   }
 }
 
 case class City(name: String, used: Int, usedAsHome: Int, id: Option[String] = None)
   extends DbModel
 
-case class CacheUpdate(cities: CityDirection, lastUpdated: LocalDate, id: Option[String] = None)
+case class CacheUpdate(cities: CityDirection, lastUpdated: LocalDateTime, id: Option[String] = None)
   extends DbModel {
-  def updated = copy(lastUpdated = LocalDate.now())
+  def updated = copy(lastUpdated = LocalDateTime.now(Clock.systemUTC()))
 }
 
 
