@@ -11,7 +11,7 @@ import scala.collection.immutable.IndexedSeq
 
 trait Calculations { this: TicketsProvider =>
 
-  val trip: Trip
+  def trip: Trip
 
   val precision = 1
 
@@ -21,10 +21,10 @@ trait Calculations { this: TicketsProvider =>
 
   override val passengers: Int = trip.passengers
 
+  lazy val treesForCity = 100 / trip.cities.size
+
 
   def calc(): Unit = {
-    val treesForCity = 100 / trip.cities.size
-
     val from = trip.dateFrom
     val to = trip.dateTo.minusDays(trip.daysFrom)
     for (homeCity <- trip.homeCities; city <- trip.cities) {
