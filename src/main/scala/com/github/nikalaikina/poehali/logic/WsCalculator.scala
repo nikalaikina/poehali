@@ -12,7 +12,7 @@ import play.api.libs.json.Json
 import scala.language.postfixOps
 import scalacache.ScalaCache
 
-case class WsCalculator(spApi: ActorRef, socket: WebSocket, trip: Trip)(implicit val citiesCache: ScalaCache[Array[Byte]])
+case class WsCalculator(spApi: ActorRef, socket: WebSocket, trip: Trip)(implicit val cache: ScalaCache[Array[Byte]])
   extends AbstractActor with TicketsProvider with Calculations {
 
   import com.github.nikalaikina.poehali.util.JsonImplicits._
