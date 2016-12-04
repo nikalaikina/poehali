@@ -19,6 +19,8 @@ case class CityDirection(from: String, to: String) {
   } else {
     CityDirection(to, from)
   }
+
+  def inverse = CityDirection(to, from)
 }
 
 trait Ticket {
