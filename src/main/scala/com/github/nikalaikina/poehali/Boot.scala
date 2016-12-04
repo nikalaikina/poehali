@@ -5,6 +5,7 @@ import akka.io.IO
 import akka.pattern.ask
 import com.github.nikalaikina.poehali.api.{RestInterface, SocketServer}
 import com.github.nikalaikina.poehali.bot.{DefaultCities, PoehaliBot}
+import com.github.nikalaikina.poehali.dao.{DataAccessActor, DataAccessMessage}
 import com.github.nikalaikina.poehali.logic.WsCalculator
 import com.github.nikalaikina.poehali.model.{Airport, AirportId, Trip}
 import com.github.nikalaikina.poehali.external.sp.{PlacesProvider, SpApi}
@@ -29,32 +30,14 @@ object Boot extends App {
 
   implicit val scalaCache = getCache
 
+  val dbActor: ActorRef = system.actorOf(Props(classOf[DataAccessActor]), "dbActor")
+  system.eventStream.subscribe(dbActor, classOf[DataAccessMessage])
+
   val spApi: ActorRef = system.actorOf(Props(classOf[SpApi]), "spApi")
   val placesActor: ActorRef = system.actorOf(PlacesProvider.props(spApi), "placesProvider")
 
   runSocketServer()
   runRestApi()
-
-//  testWs
-
-  def testWs: Any = {
-    import com.github.nikalaikina.poehali.util.JsonImplicits._
-
-    val message =
-      """
-        |{"homeCities":["Vilnius"],"cities":["Brussels","Amsterdam"],"dateFrom":"2016-11-01","dateTo":"2017-03-30","daysFrom":4,"daysTo":16}
-      """.stripMargin
-    //      |{"homeCities":["Vilnius"],"cities":["Brussels","Amsterdam","Berlin", "Paris"],"dateFrom":"2016-11-01","dateTo":"2016-12-30","daysFrom":4,"daysTo":16}
-
-    Json
-
-      .fromJson[Trip](Json.parse(message)) match {
-      case JsSuccess(value, path) =>
-        WsCalculator.start(spApi, null, value)
-      case x =>
-        println(x)
-    }
-  }
 
 
   def getCache: ScalaCache[Array[Byte]] = {
@@ -86,5 +69,21 @@ object Boot extends App {
   def runBot(list: List[Airport]): ActorRef = {
     val fullMap: Map[AirportId, Airport] = list.map(c => c.id -> c).toMap
     system.actorOf(Props(classOf[PoehaliBot], DefaultCities(fullMap)), "bot")
+  }
+
+  def testWs: Any = {
+    import com.github.nikalaikina.poehali.util.JsonImplicits._
+
+    val message =
+      """
+        |{"homeCities":["Vilnius"],"cities":["Brussels","Amsterdam"],"dateFrom":"2016-11-01","dateTo":"2017-03-30","daysFrom":4,"daysTo":16}
+      """.stripMargin
+
+    Json.fromJson[Trip](Json.parse(message)) match {
+      case JsSuccess(value, path) =>
+        WsCalculator.start(spApi, null, value)
+      case x =>
+        println(x)
+    }
   }
 }

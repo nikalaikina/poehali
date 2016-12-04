@@ -13,7 +13,13 @@ case class AirportId(id: String) {
 
 case class Direction(from: AirportId, to: AirportId)
 
-case class CityDirection(from: String, to: String)
+case class CityDirection(from: String, to: String) {
+  def woDirection = if (from < to) {
+    CityDirection(from, to)
+  } else {
+    CityDirection(to, from)
+  }
+}
 
 trait Ticket {
   val direction: CityDirection
