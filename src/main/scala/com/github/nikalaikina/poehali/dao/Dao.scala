@@ -54,12 +54,25 @@ class CityDao extends BaseDataAccess[City] {
 
   override def collectionName: String = "cities"
 
+  def findOrInsert(name: String): Future[Option[City]] = {
+    findByName(name).map {
+      case Some(city) =>
+        Some(city)
+      case None =>
+        insert(City(name))
+        Some(City(name))
+    }
+  }
+
   def findByName(name: String): Future[Option[City]] = {
-    collection.find(equal("name", name)).head.map(fromDoc)
+    collection
+      .find(equal("name", name))
+      .head
+      .map(fromDoc)
   }
 
   def updateByName(name: String, f: (City => City)): Unit = {
-    findByName(name).foreach(_.foreach(c => update(f(c))))
+    findOrInsert(name).foreach(_.foreach(c => update(f(c))))
   }
 
   override def toDoc(e: City): Document = Document(
@@ -81,10 +94,15 @@ class CityDao extends BaseDataAccess[City] {
 class CacheUpdateDao extends BaseDataAccess[CacheUpdate] {
 
   def findByDirection(direction: CityDirection): Future[Option[CacheUpdate]] = {
-    collection.find(equal("cities", direction.woDirection)).head.map(fromDoc)
+    collection.find(
+      and(
+        equal("city1", direction.woDirection.from),
+        equal("city2", direction.woDirection.to)
+      )
+    ).head.map(fromDoc)
   }
 
-  override def collectionName: String = "cities"
+  override def collectionName: String = "cacheUpdates"
 
   override def toDoc(e: CacheUpdate): Document = Document(
     "city1" -> e.cities.woDirection.from,
@@ -102,7 +120,7 @@ class CacheUpdateDao extends BaseDataAccess[CacheUpdate] {
   }
 }
 
-case class City(name: String, used: Int, usedAsHome: Int, id: Option[String] = None)
+case class City(name: String, used: Int = 0, usedAsHome: Int = 0, id: Option[String] = None)
   extends DbModel
 
 case class CacheUpdate(cities: CityDirection, lastUpdated: LocalDateTime, id: Option[String] = None)
