@@ -84,6 +84,6 @@ case class SpCity(id: String, value: String, sp_score: Option[Int], lng: Option[
   def toCity = Airport(AirportId(id), value, sp_score.getOrElse(0), Location(lng.get, lat.get))
 }
 
-case class SpRoute(flight_no: Long, airline: String, lngFrom: Float, latFrom: Float, aTimeUTC: Long, dTimeUTC: Long, latTo: Float, lngTo: Float, flyFrom: String, flyTo: String, cityFrom: String, cityTo: String) {
-  def toRoute = Route(flight_no, airline, lngFrom, latFrom, aTimeUTC, dTimeUTC, latTo, latFrom, flyFrom, flyTo, cityFrom, cityTo)
+case class SpRoute(flight_no: Long, airline: String, lngFrom: Float, latFrom: Float, aTimeUTC: Long, dTimeUTC: Long, latTo: Float, lngTo: Float, flyFrom: String, flyTo: String, cityFrom: String, cityTo: String, aTime: Long, dTime: Long) {
+  def toRoute = Route(flight_no, airline, lngFrom, latFrom, aTimeUTC, dTimeUTC, latTo, latFrom, flyFrom, flyTo, cityFrom, cityTo, aTime, dTime)
 }
