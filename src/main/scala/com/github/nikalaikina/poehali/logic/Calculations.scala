@@ -68,7 +68,7 @@ trait Calculations { this: TicketsProvider =>
   }
 
   private def getFlights(route: TripRoute, cityName: String): List[Flight] = {
-    val flights = getFlights(CityDirection(route.curCity, cityName), route.curDate.plusDays(2), route.curDate.plusDays(8))
+    val flights = getFlights(CityDirection(route.curCity, cityName), route.curDate.plusDays(3), route.curDate.plusDays(8))
     val take = flights.groupBy(_.date).toList.map(t => t._2.minBy(_.price)).sortBy(_.price)
     take.take(precision)
   }
