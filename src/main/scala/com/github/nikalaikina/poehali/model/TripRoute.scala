@@ -35,7 +35,7 @@ case class Flight(airports: Direction, direction: CityDirection, price: Float, d
 
 case class Airport(id: AirportId, city: String, score: Int, location: Location)
 
-case class Route(flight_no: Long, airline: String, lngFrom: Float, latFrom: Float, aTimeUTC: Long, dTimeUTC: Long, latTo: Float, lngTo: Float, flyFrom: String, flyTo: String, cityFrom: String, cityTo: String)
+case class Route(flight_no: Long, airline: String, lngFrom: Float, latFrom: Float, aTimeUTC: Long, dTimeUTC: Long, latTo: Float, lngTo: Float, flyFrom: String, flyTo: String, cityFrom: String, cityTo: String, aTime: Long, dTime: Long)
 
 case class TripRoute(flights: List[Flight]) {
 
