@@ -6,6 +6,7 @@ import com.github.nikalaikina.poehali.model._
 import com.github.nikalaikina.poehali.external.sp.TicketsProvider
 import com.github.nikalaikina.poehali.to.JsonRoute
 import org.java_websocket.WebSocket
+import org.java_websocket.exceptions.WebsocketNotConnectedException
 import play.api.libs.json.Json
 
 import scala.language.postfixOps
@@ -16,13 +17,25 @@ case class WsCalculator(spApi: ActorRef, socket: WebSocket, trip: Trip)(implicit
 
   import com.github.nikalaikina.poehali.util.JsonImplicits._
 
-  calc()
-  socket.close()
+  try {
+    calc()
+  } catch {
+    case e: StopCalculationException =>
+      log.debug("Client closed connection.")
+  }
+  if (!socket.isClosed) {
+    socket.close()
+  }
   context.stop(self)
 
-  def addRoute(current: TripRoute): Unit = {
+  def addRoute(current: TripRoute): Boolean = {
     log.debug(s"Added route $current")
-    socket.send(Json.toJson(JsonRoute(current.flights)).toString())
+    try {
+      socket.send(Json.toJson(JsonRoute(current.flights)).toString())
+    } catch {
+      case e: WebsocketNotConnectedException => return false
+    }
+    true
   }
 }
 

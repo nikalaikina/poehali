@@ -15,12 +15,13 @@ case class TripsCalculator(spApi: ActorRef, trip: Trip)(implicit val citiesCache
 
   var routes = new ListBuffer[TripRoute]()
 
-  def addRoute(current: TripRoute): Unit = {
+  def addRoute(current: TripRoute): Boolean = {
     log.debug(s"Added route $current")
     routes.synchronized {
       routes += current
     }
     updateState(current)
+    true
   }
 
   override def receive: Receive = {
