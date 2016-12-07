@@ -58,7 +58,9 @@ trait Calculations { this: TicketsProvider =>
 
   def processNode(current: TripRoute): Unit = {
     if (isFine(current)) {
-      addRoute(current)
+      if (!addRoute(current)) {
+        throw new StopCalculationException
+      }
     } else if (current.days < trip.daysTo) {
       val nonVisited = trip.allCities -- current.flights.map(_.direction.to) - current.curCity
       for (city <- nonVisited) {
@@ -73,5 +75,5 @@ trait Calculations { this: TicketsProvider =>
     take.take(precision)
   }
 
-  def addRoute(route: TripRoute)
+  def addRoute(route: TripRoute): Boolean
 }
