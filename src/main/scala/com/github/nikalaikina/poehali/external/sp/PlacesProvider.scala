@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, Props}
 import akka.pattern.pipe
 import com.github.nikalaikina.poehali.common.AbstractActor
 import com.github.nikalaikina.poehali.logic.Cities
-import com.github.nikalaikina.poehali.message.{GetCities, GetPlaces}
+import com.github.nikalaikina.poehali.message.{GetCities, GetCityNames, GetPlaces}
 import com.github.nikalaikina.poehali.model.{Airport, Flight}
 
 import scala.concurrent.{Await, Future}
@@ -27,6 +27,8 @@ class PlacesProvider(spApi: ActorRef)(implicit cache: ScalaCache[Array[Byte]]) e
       sender() ! cachedPlaces.take(n)
     case GetCities =>
       sender() ! Cities(cachedPlaces)
+    case GetCityNames =>
+      sender() ! cachedPlaces.map(_.city).distinct
   }
 
   def cachedPlaces: List[Airport] = {

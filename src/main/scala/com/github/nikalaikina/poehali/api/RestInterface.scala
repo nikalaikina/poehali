@@ -7,7 +7,7 @@ import akka.pattern.AskSupport
 import com.github.nikalaikina.poehali.config.UsedCities
 import com.github.nikalaikina.poehali.logic.ManualCacheHeater.Heat
 import com.github.nikalaikina.poehali.logic.{Cities, ManualCacheHeater, TripsCalculator}
-import com.github.nikalaikina.poehali.message.{GetCities, GetPlaces, GetRoutees, Routes}
+import com.github.nikalaikina.poehali.message._
 import com.github.nikalaikina.poehali.model.{Airport, Trip}
 import com.github.nikalaikina.poehali.to.JsonRoute
 import spray.http.HttpHeaders
@@ -122,6 +122,17 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
                   .mapTo[List[Airport]]
                   .map { x => ctx.complete(Json.toJson(x).toString) }
               }
+            }
+          }
+        }
+      } ~
+      pathPrefix("cityNames") {
+        pathEnd {
+          get {
+            respondWithMediaType(`application/json`) { (ctx: RequestContext) =>
+              (citiesProvider ? GetCityNames)
+                .mapTo[List[String]]
+                .map { x => ctx.complete(Json.toJson(x).toString) }
             }
           }
         }
