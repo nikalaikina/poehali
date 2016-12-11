@@ -17,13 +17,21 @@ trait BaseDataAccess[T <: DbModel] {
 
   val database: MongoDatabase = MongoClient().getDatabase("poehali")
   val collection: MongoCollection[Document] = database.getCollection(collectionName)
+  val mutableCollection: MongoCollection[org.mongodb.scala.bson.collection.mutable.Document] =
+    database.getCollection(collectionName)
 
   def collectionName: String
 
   def all: Future[Seq[T]] = collection.find().map(fromDoc).toFuture().map(_.flatten)
 
-  def insert(e: T): Unit = {
-    collection.insertOne(toDoc(e)).results()
+  def find(id: String): Option[T] = {
+    collection.find(equal("_id", new ObjectId(id))).results().headOption.flatMap(fromDoc)
+  }
+
+  def insert(e: T): Option[String] = {
+    val doc = org.mongodb.scala.bson.collection.mutable.Document(toDoc(e).toSet)
+    mutableCollection.insertOne(doc).results()
+    doc.get("_id").map(_.asObjectId().getValue.toString)
   }
 
   def update(e: T): Unit = {
