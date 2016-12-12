@@ -19,7 +19,15 @@ import scalacache.ScalaCache
 import scalacache.redis.RedisCache
 
 
-object Boot extends App {
+import java.time.{Clock, LocalDateTime}
+
+import com.github.nikalaikina.poehali.config.UsedCities
+import com.github.nikalaikina.poehali.dao.{CacheUpdate, CacheUpdateDao, City, CityDao}
+import com.github.nikalaikina.poehali.model.CityDirection
+
+
+
+object Boot extends App with DbInit {
   val host = "0.0.0.0"
   val port = 8888
 
@@ -35,6 +43,8 @@ object Boot extends App {
 
   val spApi: ActorRef = system.actorOf(Props(classOf[SpApi]), "spApi")
   val placesActor: ActorRef = system.actorOf(PlacesProvider.props(spApi), "placesProvider")
+
+  if (args.contains("db_init")) initDb
 
   runSocketServer()
   runRestApi()
@@ -86,4 +96,30 @@ object Boot extends App {
         println(x)
     }
   }
+}
+
+trait DbInit extends App {
+
+  def initDb: Unit = {
+    val cityDao = new CityDao
+    val cacheUpdateDao = new CacheUpdateDao
+    val cities = UsedCities.cities
+
+    Thread.sleep(3 * 1000)
+
+    for (c <- cities) {
+      cityDao.insert(City(c))
+    }
+    val t = LocalDateTime.now(Clock.systemUTC()).minusHours(8)
+
+    (for (from <- cities; to <- cities; if from != to)
+      yield CityDirection(from, to).woDirection)
+      .toSet
+      .foreach { (d: CityDirection) =>
+        val update = CacheUpdate(d, t)
+        cacheUpdateDao.insert(update)
+      }
+
+  }
+
 }
