@@ -24,6 +24,7 @@ case class WsCalculator(spApi: ActorRef, socket: WebSocket, trip: Trip)(implicit
       log.debug("Client closed connection.")
   }
   if (!socket.isClosed) {
+    socket.send(Json.toJson(JsonRoute(List.empty)).toString())
     socket.close()
   }
   context.stop(self)
