@@ -10,7 +10,7 @@ import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
 import scalacache.ScalaCache
 
-case class TripsCalculator(spApi: ActorRef, trip: Trip)(implicit val citiesCache: ScalaCache[Array[Byte]])
+case class TripsCalculator(spApi: ActorRef, trip: Trip)(implicit val cache: ScalaCache[Array[Byte]])
   extends AbstractActor with TicketsProvider with Calculations {
 
   var routes = new ListBuffer[TripRoute]()

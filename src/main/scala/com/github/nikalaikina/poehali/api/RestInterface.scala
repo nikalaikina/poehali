@@ -5,13 +5,13 @@ import java.time.{DayOfWeek, Period}
 import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, Props}
 import akka.pattern.AskSupport
 import com.github.nikalaikina.poehali.config.UsedCities
+import com.github.nikalaikina.poehali.dao.RouteCrud
 import com.github.nikalaikina.poehali.logic.ManualCacheHeater.Heat
 import com.github.nikalaikina.poehali.logic.{Cities, ManualCacheHeater, TripsCalculator}
 import com.github.nikalaikina.poehali.message._
 import com.github.nikalaikina.poehali.model.{Airport, Trip}
 import com.github.nikalaikina.poehali.to.JsonRoute
-import spray.http.HttpHeaders
-import spray.http.MediaTypes
+import spray.http.{HttpHeaders, MediaTypes, StatusCodes}
 import spray.routing
 import spray.routing.RejectionHandler.Default
 import spray.routing._
@@ -19,7 +19,6 @@ import spray.routing._
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 import scalacache.ScalaCache
-import scalacache.serialization.InMemoryRepr
 
 
 class RestInterface(val citiesProvider: ActorRef, val spApi: ActorRef)(implicit val citiesCache: ScalaCache[Array[Byte]])
@@ -51,6 +50,7 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
   val spApi: ActorRef
   val cacheHeater = ManualCacheHeater.start(spApi)
   var citiesContainer: Cities = _
+  val routeCrud = new RouteCrud()
 
   val AccessControlAllowAll = HttpHeaders.RawHeader(
     "Access-Control-Allow-Origin", "*"
@@ -133,6 +133,38 @@ trait RestApi extends HttpService { actor: Actor with AskSupport =>
               (citiesProvider ? GetCityNames)
                 .mapTo[List[String]]
                 .map { x => ctx.complete(Json.toJson(x).toString) }
+            }
+          }
+        }
+      } ~
+      pathPrefix("route") {
+        pathEnd {
+          post {
+            entity(as[String]) { routeString =>
+              Json.fromJson[JsonRoute](Json.parse(routeString)) match {
+                case JsSuccess(route, path) =>
+                  routeCrud.insert(route) match {
+                    case Some(id) =>
+                      complete {
+                        id
+                      }
+                    case None =>
+                      complete(StatusCodes.BadRequest)
+                  }
+                case x =>
+                  println(x)
+                  complete(StatusCodes.BadRequest)
+              }
+
+            }
+
+          }
+        } ~
+        get {
+          path(Segment) { id =>
+            respondWithMediaType(`application/json`) { (ctx: RequestContext) =>
+              routeCrud.find(id)
+              ctx.complete(Json.toJson(routeCrud.find(id)).toString)
             }
           }
         }

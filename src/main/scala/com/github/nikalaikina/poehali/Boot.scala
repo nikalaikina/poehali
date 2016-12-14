@@ -5,6 +5,7 @@ import akka.io.IO
 import akka.pattern.ask
 import com.github.nikalaikina.poehali.api.{RestInterface, SocketServer}
 import com.github.nikalaikina.poehali.bot.{DefaultCities, PoehaliBot}
+import com.github.nikalaikina.poehali.dao.{DataAccessActor, DataAccessMessage}
 import com.github.nikalaikina.poehali.logic.WsCalculator
 import com.github.nikalaikina.poehali.model.{Airport, AirportId, Trip}
 import com.github.nikalaikina.poehali.external.sp.{PlacesProvider, SpApi}
@@ -18,7 +19,15 @@ import scalacache.ScalaCache
 import scalacache.redis.RedisCache
 
 
-object Boot extends App {
+import java.time.{Clock, LocalDateTime}
+
+import com.github.nikalaikina.poehali.config.UsedCities
+import com.github.nikalaikina.poehali.dao.{CacheUpdate, CacheUpdateDao, City, CityDao}
+import com.github.nikalaikina.poehali.model.CityDirection
+
+
+
+object Boot extends App with DbInit {
   val host = "0.0.0.0"
   val port = 8888
 
@@ -29,32 +38,16 @@ object Boot extends App {
 
   implicit val scalaCache = getCache
 
+  val dbActor: ActorRef = system.actorOf(Props(classOf[DataAccessActor]), "dbActor")
+  system.eventStream.subscribe(dbActor, classOf[DataAccessMessage])
+
   val spApi: ActorRef = system.actorOf(Props(classOf[SpApi]), "spApi")
   val placesActor: ActorRef = system.actorOf(PlacesProvider.props(spApi), "placesProvider")
 
+  if (args.contains("db_init")) initDb
+
   runSocketServer()
   runRestApi()
-
-//  testWs
-
-  def testWs: Any = {
-    import com.github.nikalaikina.poehali.util.JsonImplicits._
-
-    val message =
-      """
-        |{"homeCities":["Vilnius"],"cities":["Brussels","Amsterdam"],"dateFrom":"2016-11-01","dateTo":"2017-03-30","daysFrom":4,"daysTo":16}
-      """.stripMargin
-    //      |{"homeCities":["Vilnius"],"cities":["Brussels","Amsterdam","Berlin", "Paris"],"dateFrom":"2016-11-01","dateTo":"2016-12-30","daysFrom":4,"daysTo":16}
-
-    Json
-
-      .fromJson[Trip](Json.parse(message)) match {
-      case JsSuccess(value, path) =>
-        WsCalculator.start(spApi, null, value)
-      case x =>
-        println(x)
-    }
-  }
 
 
   def getCache: ScalaCache[Array[Byte]] = {
@@ -87,4 +80,46 @@ object Boot extends App {
     val fullMap: Map[AirportId, Airport] = list.map(c => c.id -> c).toMap
     system.actorOf(Props(classOf[PoehaliBot], DefaultCities(fullMap)), "bot")
   }
+
+  def testWs: Any = {
+    import com.github.nikalaikina.poehali.util.JsonImplicits._
+
+    val message =
+      """
+        |{"homeCities":["Vilnius"],"cities":["Brussels","Amsterdam"],"dateFrom":"2016-11-01","dateTo":"2017-03-30","daysFrom":4,"daysTo":16}
+      """.stripMargin
+
+    Json.fromJson[Trip](Json.parse(message)) match {
+      case JsSuccess(value, path) =>
+        WsCalculator.start(spApi, null, value)
+      case x =>
+        println(x)
+    }
+  }
+}
+
+trait DbInit extends App {
+
+  def initDb: Unit = {
+    val cityDao = new CityDao
+    val cacheUpdateDao = new CacheUpdateDao
+    val cities = UsedCities.cities
+
+    Thread.sleep(3 * 1000)
+
+    for (c <- cities) {
+      cityDao.insert(City(c))
+    }
+    val t = LocalDateTime.now(Clock.systemUTC()).minusHours(8)
+
+    (for (from <- cities; to <- cities; if from != to)
+      yield CityDirection(from, to).woDirection)
+      .toSet
+      .foreach { (d: CityDirection) =>
+        val update = CacheUpdate(d, t)
+        cacheUpdateDao.insert(update)
+      }
+
+  }
+
 }

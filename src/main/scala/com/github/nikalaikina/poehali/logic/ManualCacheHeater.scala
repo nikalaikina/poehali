@@ -12,7 +12,7 @@ import com.github.nikalaikina.poehali.external.sp.TicketsProvider
 import scalacache.ScalaCache
 
 
-case class ManualCacheHeater(spApi: ActorRef)(implicit val citiesCache: ScalaCache[Array[Byte]])
+case class ManualCacheHeater(spApi: ActorRef)(implicit val cache: ScalaCache[Array[Byte]])
   extends AbstractActor with TicketsProvider {
 
 
