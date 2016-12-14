@@ -1,6 +1,7 @@
 package com.github.nikalaikina.poehali.test
 
 import java.net.{InetSocketAddress, URI}
+import java.util.concurrent.atomic.AtomicInteger
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.LoggingAdapter
@@ -13,15 +14,20 @@ import org.java_websocket.handshake.{ClientHandshake, ServerHandshake}
 import org.java_websocket.server.WebSocketServer
 import play.api.libs.json.{JsSuccess, Json}
 
+import scala.util.Random
 import scalacache.ScalaCache
 
 
 object CalculatorTest extends App {
 
+  val i = new AtomicInteger()
 
   private val thread = new Thread(new Runnable {
     override def run(): Unit = {
-      (1 to 5).map(_ => client).par.foreach(_.connect())
+      (1 to 20).map(_ => client).par.foreach { s =>
+        Thread.sleep(Random.nextInt(3) / 2 * 1000)
+        s.connect()
+      }
     }
   })
   thread.setDaemon(false)
@@ -36,7 +42,7 @@ object CalculatorTest extends App {
     def textMessage = {
       val citiesString = util.Random
         .shuffle(cities)
-        .take(4)
+        .take(5)
           .map(_.replaceAll("%20", " "))
         .map(""""""" + _ + """"""")
         .mkString(",")
@@ -59,7 +65,7 @@ object CalculatorTest extends App {
     override def onClose(code: Int, reason: String, remote: Boolean): Unit = {
       val time = (System.nanoTime() - t) / 1000 / 1000 / 1000
       println("[=] " * 40)
-      println(s"DONE in $time seconds")
+      println(s"DONE ${i.getAndIncrement()} in $time seconds")
     }
 
     override def onOpen(handshakedata: ServerHandshake): Unit = {
