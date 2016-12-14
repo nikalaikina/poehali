@@ -45,6 +45,8 @@ libraryDependencies ++= {
     "com.github.cb372" %% "scalacache-redis" % "0.9.2",
     "org.java-websocket" % "Java-WebSocket" % "1.3.0",
 
+    "org.mongodb.scala" %% "mongo-scala-driver" % "1.0.1",
+
     "ch.qos.logback" % "logback-classic" % "1.1.2",
     "org.specs2" %% "specs2" % "2.3.13" % "test"
   )
