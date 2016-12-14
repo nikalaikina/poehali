@@ -4,11 +4,10 @@ package com.github.nikalaikina.poehali.api
 
 import java.net.InetSocketAddress
 
-import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem}
+import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, Props}
 import akka.event.LoggingAdapter
-import com.github.nikalaikina.poehali.common.AbstractActor
 import com.github.nikalaikina.poehali.dao.{CityUsed, CityUsedAsHome}
-import com.github.nikalaikina.poehali.logic.{Cities, WsCalculator}
+import com.github.nikalaikina.poehali.logic.{Cities, WsBatchSendActor, WsCalculator}
 import com.github.nikalaikina.poehali.model.{Flight, Trip, TripRoute}
 import org.java_websocket.WebSocket
 import org.java_websocket.handshake.ClientHandshake
@@ -41,7 +40,9 @@ case class SocketServer(host: String,
     log.info(s"message given: $message")
     Json.fromJson[Trip](Json.parse(message)) match {
       case JsSuccess(trip, path) =>
-        map += webSocket -> WsCalculator.start(spApi, webSocket, trip)
+        val batchSender = context.actorOf(Props(classOf[WsBatchSendActor], webSocket))
+
+        map += webSocket -> WsCalculator.start(spApi, batchSender, trip)
         trip.cities.foreach(c => context.eventStream.publish(CityUsed(c)))
         trip.homeCities.foreach(c => context.eventStream.publish(CityUsedAsHome(c)))
       case x =>
