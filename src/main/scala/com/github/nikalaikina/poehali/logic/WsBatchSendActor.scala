@@ -33,7 +33,6 @@ class WsBatchSendActor(socket: WebSocket) extends AbstractActor {
     case CloseConnection =>
       if (!socket.isClosed) {
         socket.send(Json.toJson(batchToSend.map(t => JsonRoute(t.flights))).toString())
-        socket.send(Json.toJson(JsonRoute(List.empty)).toString())
         socket.close()
       }
       self ! PoisonPill
